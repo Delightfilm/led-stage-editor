@@ -212,7 +212,8 @@ const zoneForPart = (name) => {
   if (/하의|바지|치마|팬츠/.test(name)) return "bottom";
   if (/신발|슈즈|부츠/.test(name)) return "shoes";
   if (/모자|캡|헬멧/.test(name)) return "hat";
-  return "acc";
+  if (/액세서리|장식|벨트|acc/i.test(name)) return "acc";
+  return "all"; // 특정 부위 이름이 아니면(예: "EL 와이어") 하나로 통합된 EL로 보고 몸 전체가 함께 빛나요
 };
 
 const partExportSuffix = (name) => {
@@ -244,7 +245,7 @@ const computeZoneColors = (costume, allBlocks, time) => {
 };
 
 const zoneFillProps = (zoneColors, zone) => {
-  const c = zoneColors[zone];
+  const c = zoneColors[zone] || zoneColors.all;
   if (!c || c.a <= 0.02) return { fill: "#252B3A", filter: "none", opacity: 1 };
   return {
     fill: `rgb(${c.r},${c.g},${c.b})`,
@@ -254,8 +255,7 @@ const zoneFillProps = (zoneColors, zone) => {
 };
 
 const makeParts = () => [
-  { id: uid(), name: "상의", pin: 2 },
-  { id: uid(), name: "하의", pin: 3 },
+  { id: uid(), name: "EL 와이어", pin: 2 },
 ];
 
 const makeDefaultCostumes = (n = 1) =>
@@ -1431,7 +1431,7 @@ export default function App() {
             </div>
             <div className="stage">
               <AvatarPreview zoneColors={zoneColors} glowId="glow-main" />
-              <p className="stageHint">▶ 재생하면 지금 색으로 빛나요 · 스페이스바로 재생/정지 · 파츠 이름에 "상의·하의" 등이 들어가면 해당 부위에 표시돼요</p>
+              <p className="stageHint">▶ 재생하면 지금 색으로 빛나요 · 스페이스바로 재생/정지 · 파츠 이름을 "상의·하의" 등으로 지으면 그 부위만, 그냥 "EL 와이어"처럼 두면 몸 전체가 같이 빛나요</p>
             </div>
           </section>
 
