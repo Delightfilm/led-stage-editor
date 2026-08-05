@@ -490,7 +490,7 @@ const TUTORIAL_STEPS = [
   {
     icon: "🖱️",
     title: "3. 효과 블록 올리기",
-    body: "왼쪽 아래의 효과 카드(단색·싸이키·펄스 등)를 마우스로 끌어서 타임라인 트랙 위에 놓으세요. 블록을 잡고 옮기거나, 양쪽 끝을 잡아 길이를 늘이고 줄일 수 있어요.",
+    body: "왼쪽 아래의 효과 카드(단색·싸이키·펄스 등)를 마우스로 끌어서 타임라인 트랙 위에 놓으세요. 블록을 잡고 옮기거나, 양쪽 끝을 잡아 길이를 늘이고 줄일 수 있어요. 드래그하면서 SHIFT를 누르면 다른 블록 끝단·재생 헤드에 자석처럼 딱 붙어요. 블록을 선택하고 재생 헤드를 그 안에 둔 뒤 C를 누르면 그 자리에서 잘리고, SHIFT+C는 그 위치의 모든 블록을 한 번에 잘라요.",
   },
   {
     icon: "🎛️",
@@ -529,6 +529,7 @@ export default function App() {
   const [geminiBusy, setGeminiBusy] = useState(false);
   const [geminiStatus, setGeminiStatus] = useState("");
   const [customPresets, setCustomPresets] = useState(() => loadStoredCustomPresets());
+  const [snapGuide, setSnapGuide] = useState(null); // 스냅(자석)이 걸렸을 때 보여줄 안내선 시각(초)
 
   const audioElRef = useRef(null);
   const audioUrlRef = useRef(null);
@@ -730,32 +731,84 @@ export default function App() {
     setPreviewCostumeId(costumeId);
   };
 
+  /** SHIFT 드래그 시 자석처럼 붙을 기준점들: 0초, 재생 헤드, 같은 트랙의 다른 블록 시작/끝 */
+  const getSnapPoints = (excludeId, costumeId, partId) => {
+    const points = [0, currentTime];
+    blocks.forEach((b) => {
+      if (b.id === excludeId) return;
+      if (b.costumeId !== costumeId || b.partId !== partId) return;
+      points.push(b.start, b.start + b.dur);
+    });
+    return points;
+  };
+
+  const snapTime = (t, points, thresholdSec) => {
+    let best = t;
+    let bestDist = thresholdSec;
+    points.forEach((p) => {
+      const dist = Math.abs(p - t);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = p;
+      }
+    });
+    return best;
+  };
+
   const startBlockDrag = (e, block, mode) => {
     e.stopPropagation();
     e.preventDefault();
     setSelectedBlockId(block.id);
     setPreviewCostumeId(block.costumeId);
+    const snapPoints = getSnapPoints(block.id, block.costumeId, block.partId);
     dragRef.current = { mode, id: block.id, startX: e.clientX, s0: block.start, d0: block.dur };
     const move = (ev) => {
       const d = dragRef.current;
       if (!d) return;
       const dt = (ev.clientX - d.startX) / pps;
+      const snapOn = ev.shiftKey;
+      const threshold = 8 / pps; // 8px 반경 안에 있으면 스냅
+      let guideT = null;
+
       setBlocks((bs) =>
         bs.map((b) => {
           if (b.id !== d.id) return b;
           if (d.mode === "move") {
-            return { ...b, start: Math.max(0, Math.min(duration - b.dur, d.s0 + dt)) };
+            let ns = Math.max(0, Math.min(duration - b.dur, d.s0 + dt));
+            if (snapOn) {
+              const snappedStart = snapTime(ns, snapPoints, threshold);
+              const snappedFromEnd = snapTime(ns + b.dur, snapPoints, threshold) - b.dur;
+              const useEnd = Math.abs(snappedFromEnd - ns) < Math.abs(snappedStart - ns);
+              const snapped = useEnd ? snappedFromEnd : snappedStart;
+              if (snapped !== ns) guideT = useEnd ? snapped + b.dur : snapped;
+              ns = Math.max(0, Math.min(duration - b.dur, snapped));
+            }
+            return { ...b, start: ns };
           }
           if (d.mode === "l") {
-            const ns = Math.max(0, Math.min(d.s0 + d.d0 - 0.2, d.s0 + dt));
+            let ns = Math.max(0, Math.min(d.s0 + d.d0 - 0.2, d.s0 + dt));
+            if (snapOn) {
+              const snapped = snapTime(ns, snapPoints, threshold);
+              if (snapped !== ns) guideT = snapped;
+              ns = Math.max(0, Math.min(d.s0 + d.d0 - 0.2, snapped));
+            }
             return { ...b, start: ns, dur: d.s0 + d.d0 - ns };
           }
-          return { ...b, dur: Math.max(0.2, Math.min(duration - d.s0, d.d0 + dt)) };
+          let nd = Math.max(0.2, Math.min(duration - d.s0, d.d0 + dt));
+          if (snapOn) {
+            const endT = d.s0 + nd;
+            const snappedEnd = snapTime(endT, snapPoints, threshold);
+            if (snappedEnd !== endT) guideT = snappedEnd;
+            nd = Math.max(0.2, Math.min(duration - d.s0, snappedEnd - d.s0));
+          }
+          return { ...b, dur: nd };
         })
       );
+      setSnapGuide(guideT);
     };
     const up = () => {
       dragRef.current = null;
+      setSnapGuide(null);
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
     };
@@ -994,6 +1047,65 @@ export default function App() {
     setSelectedBlockId(null);
   };
 
+  /** 프리미어의 면도날(Razor) 도구처럼, 블록을 재생 헤드 위치에서 둘로 잘라요 */
+  const MIN_CUT_SEG = 0.1; // 이보다 짧은 조각은 만들지 않음(초)
+  const splitBlockAt = (block, t) => {
+    const segStart = block.start;
+    const segEnd = block.start + block.dur;
+    if (t <= segStart + MIN_CUT_SEG || t >= segEnd - MIN_CUT_SEG) return null;
+    const left = { ...block, dur: Math.round((t - segStart) * 20) / 20 };
+    const right = { ...block, id: uid(), start: Math.round(t * 20) / 20, dur: Math.round((segEnd - t) * 20) / 20 };
+    return [left, right];
+  };
+
+  /** C: 선택한 블록만 재생 헤드 위치에서 자르기 · SHIFT+C: 모든 트랙의 블록을 한 번에 자르기 */
+  const cutAtPlayhead = (allTracks) => {
+    const t = currentTime;
+    if (allTracks) {
+      const next = [];
+      let cutCount = 0;
+      blocks.forEach((b) => {
+        if (t > b.start && t < b.start + b.dur) {
+          const res = splitBlockAt(b, t);
+          if (res) {
+            next.push(...res);
+            cutCount++;
+            return;
+          }
+        }
+        next.push(b);
+      });
+      if (cutCount) {
+        setBlocks(next);
+        showToast(`✂️ 재생 헤드 위치에서 블록 ${cutCount}개를 모두 잘랐어요!`);
+      } else {
+        showToast("✂️ 재생 헤드 위치에 자를 블록이 없어요.");
+      }
+      return;
+    }
+    if (!selectedBlockId) {
+      showToast("✂️ 먼저 자를 블록을 선택해 주세요.");
+      return;
+    }
+    const idx = blocks.findIndex((b) => b.id === selectedBlockId);
+    if (idx === -1) return;
+    const b = blocks[idx];
+    if (!(t > b.start && t < b.start + b.dur)) {
+      showToast("✂️ 재생 헤드가 선택한 블록 범위 안에 있을 때만 잘라요.");
+      return;
+    }
+    const res = splitBlockAt(b, t);
+    if (!res) {
+      showToast("✂️ 자르기엔 블록이 너무 짧아요.");
+      return;
+    }
+    const next = [...blocks];
+    next.splice(idx, 1, ...res);
+    setBlocks(next);
+    setSelectedBlockId(res[0].id);
+    showToast("✂️ 블록을 재생 헤드 위치에서 잘랐어요!");
+  };
+
   useEffect(() => {
     const h = (e) => {
       const typing = ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName);
@@ -1015,11 +1127,16 @@ export default function App() {
       }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedBlockId && !typing) {
         deleteBlock();
+        return;
+      }
+      if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        cutAtPlayhead(e.shiftKey);
       }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [selectedBlockId, playing]);
+  }, [selectedBlockId, playing, blocks, currentTime]);
 
   useEffect(() => {
     const el = timelineScrollRef.current;
@@ -1311,7 +1428,7 @@ export default function App() {
             className="timelineScroll"
             ref={timelineScrollRef}
             onMouseDown={startTimelinePan}
-            title="드래그 또는 마우스 휠로 좌우 이동 · +/− 키로 확대/축소"
+            title="드래그 또는 마우스 휠로 좌우 이동 · +/− 키로 확대/축소 · C: 선택 블록 자르기 · SHIFT+C: 전체 트랙 자르기 · 블록 드래그 중 SHIFT: 자석처럼 스냅"
           >
             <div className="timelineContent" ref={contentRef} style={{ width: timelineW }}>
               <div className="ruler" onClick={(e) => seek(timeFromEvent(e))} title="클릭하면 그 위치로 이동해요">
@@ -1373,6 +1490,9 @@ export default function App() {
               <div className="playhead" style={{ left: currentTime * pps }}>
                 <div className="phTop" />
               </div>
+              {snapGuide != null && (
+                <div className="snapGuide" style={{ left: snapGuide * pps }} />
+              )}
             </div>
           </div>
 
@@ -1791,6 +1911,10 @@ body.resizingPanels, body.resizingPanels * { cursor: col-resize !important; user
 .phTop {
   position: sticky; top: 0; width: 0; height: 0; margin-left: -6px;
   border: 7px solid transparent; border-top: 10px solid #FF3B6B;
+}
+.snapGuide {
+  position: absolute; top: 0; bottom: 0; width: 2px; z-index: 9;
+  background: #FFD93B; box-shadow: 0 0 8px #FFD93B; pointer-events: none;
 }
 .lenBar { padding: 8px 14px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
 .lenBar input { width: 70px; background: #171D2C; border: 1px solid var(--line);
