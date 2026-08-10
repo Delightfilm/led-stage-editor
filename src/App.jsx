@@ -490,7 +490,7 @@ const TUTORIAL_STEPS = [
   {
     icon: "🖱️",
     title: "3. 효과 블록 올리기",
-    body: "왼쪽 아래의 효과 카드(단색·싸이키·펄스 등)를 마우스로 끌어서 타임라인 트랙 위에 놓으세요. 블록을 잡고 옮기거나, 양쪽 끝을 잡아 길이를 늘이고 줄일 수 있어요. 드래그하면서 SHIFT를 누르면 다른 블록 끝단·재생 헤드에 자석처럼 딱 붙어요. 블록을 선택하고 재생 헤드를 그 안에 둔 뒤 C를 누르면 그 자리에서 잘리고, SHIFT+C는 그 위치의 모든 블록을 한 번에 잘라요.",
+    body: "왼쪽 아래의 효과 카드(단색·싸이키·펄스 등)를 마우스로 끌어서 타임라인 트랙 위에 놓으세요. 블록을 잡고 옮기거나, 양쪽 끝을 잡아 길이를 늘이고 줄일 수 있어요. 드래그하면서 SHIFT를 누르면 다른 블록 끝단(다른 의상의 블록 포함)·재생 헤드에 자석처럼 딱 붙어요. 블록을 선택하고 재생 헤드를 그 안에 둔 뒤 C를 누르면 그 자리에서 잘리고, SHIFT+C는 그 위치의 모든 블록을 한 번에 잘라요. 실수했다면 CTRL+Z로 언제든 되돌릴 수 있어요.",
   },
   {
     icon: "🎛️",
@@ -540,6 +540,63 @@ export default function App() {
   const timelineScrollRef = useRef(null);
   const contentRef = useRef(null);
   const dragRef = useRef(null);
+  const historyRef = useRef([]); // 되돌리기(Undo) 스택: {costumes, blocks} 스냅샷
+  const futureRef = useRef([]); // 다시 실행(Redo) 스택
+  const lastCommitRef = useRef({ key: null, time: 0 });
+
+  /**
+   * 상태를 바꾸기 직전에 호출해서 현재 상태를 되돌리기 스택에 저장해요.
+   * key를 주면, 같은 key로 600ms 안에 연달아 호출될 때(예: 슬라이더를 드래그하는 중)는
+   * 하나의 되돌리기 단계로 묶어서 너무 잘게 쪼개지지 않게 해요.
+   */
+  const commitHistory = (key = null) => {
+    const now = Date.now();
+    if (key && lastCommitRef.current.key === key && now - lastCommitRef.current.time < 600) {
+      lastCommitRef.current.time = now;
+      return;
+    }
+    lastCommitRef.current = { key, time: now };
+    historyRef.current.push({
+      costumes: JSON.parse(JSON.stringify(costumes)),
+      blocks: JSON.parse(JSON.stringify(blocks)),
+    });
+    if (historyRef.current.length > 60) historyRef.current.shift();
+    futureRef.current = [];
+  };
+
+  const undo = () => {
+    if (!historyRef.current.length) {
+      showToast("↩️ 더 되돌릴 내용이 없어요.");
+      return;
+    }
+    const prev = historyRef.current.pop();
+    futureRef.current.push({
+      costumes: JSON.parse(JSON.stringify(costumes)),
+      blocks: JSON.parse(JSON.stringify(blocks)),
+    });
+    setCostumes(prev.costumes);
+    setBlocks(prev.blocks);
+    setSelectedBlockId(null);
+    lastCommitRef.current = { key: null, time: 0 };
+    showToast("↩️ 되돌렸어요");
+  };
+
+  const redo = () => {
+    if (!futureRef.current.length) {
+      showToast("↪️ 다시 실행할 내용이 없어요.");
+      return;
+    }
+    const next = futureRef.current.pop();
+    historyRef.current.push({
+      costumes: JSON.parse(JSON.stringify(costumes)),
+      blocks: JSON.parse(JSON.stringify(blocks)),
+    });
+    setCostumes(next.costumes);
+    setBlocks(next.blocks);
+    setSelectedBlockId(null);
+    lastCommitRef.current = { key: null, time: 0 };
+    showToast("↪️ 다시 실행했어요");
+  };
 
   const duration = audioInfo ? audioInfo.duration : manualDuration;
   const timelineW = Math.max(600, duration * pps);
@@ -726,17 +783,17 @@ export default function App() {
       label: preset?.name || meta.name,
       icon: preset?.icon || meta.icon,
     };
+    commitHistory();
     setBlocks((bs) => [...bs, nb]);
     setSelectedBlockId(nb.id);
     setPreviewCostumeId(costumeId);
   };
 
-  /** SHIFT 드래그 시 자석처럼 붙을 기준점들: 0초, 재생 헤드, 같은 트랙의 다른 블록 시작/끝 */
-  const getSnapPoints = (excludeId, costumeId, partId) => {
+  /** SHIFT 드래그 시 자석처럼 붙을 기준점들: 0초, 재생 헤드, 그리고 (같은 파츠 내 다른 블록 + 다른 의상/파츠의 모든 블록) 시작·끝 */
+  const getSnapPoints = (excludeId) => {
     const points = [0, currentTime];
     blocks.forEach((b) => {
       if (b.id === excludeId) return;
-      if (b.costumeId !== costumeId || b.partId !== partId) return;
       points.push(b.start, b.start + b.dur);
     });
     return points;
@@ -758,9 +815,10 @@ export default function App() {
   const startBlockDrag = (e, block, mode) => {
     e.stopPropagation();
     e.preventDefault();
+    commitHistory();
     setSelectedBlockId(block.id);
     setPreviewCostumeId(block.costumeId);
-    const snapPoints = getSnapPoints(block.id, block.costumeId, block.partId);
+    const snapPoints = getSnapPoints(block.id);
     dragRef.current = { mode, id: block.id, startX: e.clientX, s0: block.start, d0: block.dur };
     const move = (ev) => {
       const d = dragRef.current;
@@ -827,6 +885,7 @@ export default function App() {
         })
       )
     );
+    commitHistory();
     setBlocks((bs) => [...bs, ...nbs]);
     showToast("✨ 현재 위치에 모든 의상·파츠 전체 점등 블록을 추가했어요! (흰색 2초)");
   };
@@ -838,18 +897,23 @@ export default function App() {
       color: COSTUME_COLORS[costumes.length % COSTUME_COLORS.length],
       parts: makeParts(),
     };
+    commitHistory();
     setCostumes((cs) => [...cs, c]);
     setExpanded((e) => ({ ...e, [c.id]: true }));
   };
   const removeCostume = (cid) => {
     if (!window.confirm("이 의상과 관련된 모든 효과 블록이 함께 삭제돼요. 정말 삭제할까요?")) return;
+    commitHistory();
     setCostumes((cs) => cs.filter((c) => c.id !== cid));
     setBlocks((bs) => bs.filter((b) => b.costumeId !== cid));
     if (previewCostumeId === cid) setPreviewCostumeId(null);
   };
-  const renameCostume = (cid, name) =>
+  const renameCostume = (cid, name) => {
+    commitHistory(`rename:${cid}`);
     setCostumes((cs) => cs.map((c) => (c.id === cid ? { ...c, name } : c)));
-  const addPart = (cid) =>
+  };
+  const addPart = (cid) => {
+    commitHistory();
     setCostumes((cs) =>
       cs.map((c) =>
         c.id === cid
@@ -857,7 +921,9 @@ export default function App() {
           : c
       )
     );
-  const updatePart = (cid, pid, patch) =>
+  };
+  const updatePart = (cid, pid, patch) => {
+    commitHistory(`part:${pid}`);
     setCostumes((cs) =>
       cs.map((c) =>
         c.id === cid
@@ -865,7 +931,9 @@ export default function App() {
           : c
       )
     );
+  };
   const removePart = (cid, pid) => {
+    commitHistory();
     setCostumes((cs) =>
       cs.map((c) => (c.id === cid ? { ...c, parts: c.parts.filter((p) => p.id !== pid) } : c))
     );
@@ -951,6 +1019,8 @@ export default function App() {
     if (!file) return;
     try {
       const data = JSON.parse(await file.text());
+      historyRef.current = [];
+      futureRef.current = [];
       setCostumes(data.costumes || []);
       setBlocks(data.blocks || []);
       if (Array.isArray(data.customPresets)) {
@@ -1040,9 +1110,12 @@ export default function App() {
   };
 
   const selectedBlock = blocks.find((b) => b.id === selectedBlockId) || null;
-  const patchBlock = (patch) =>
+  const patchBlock = (patch) => {
+    commitHistory(`patch:${selectedBlockId}`);
     setBlocks((bs) => bs.map((b) => (b.id === selectedBlockId ? { ...b, ...patch } : b)));
+  };
   const deleteBlock = () => {
+    commitHistory();
     setBlocks((bs) => bs.filter((b) => b.id !== selectedBlockId));
     setSelectedBlockId(null);
   };
@@ -1076,6 +1149,7 @@ export default function App() {
         next.push(b);
       });
       if (cutCount) {
+        commitHistory();
         setBlocks(next);
         showToast(`✂️ 재생 헤드 위치에서 블록 ${cutCount}개를 모두 잘랐어요!`);
       } else {
@@ -1099,6 +1173,7 @@ export default function App() {
       showToast("✂️ 자르기엔 블록이 너무 짧아요.");
       return;
     }
+    commitHistory();
     const next = [...blocks];
     next.splice(idx, 1, ...res);
     setBlocks(next);
@@ -1125,6 +1200,17 @@ export default function App() {
         zoomOut();
         return;
       }
+      if (!typing && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (!typing && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+        return;
+      }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedBlockId && !typing) {
         deleteBlock();
         return;
@@ -1136,7 +1222,7 @@ export default function App() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [selectedBlockId, playing, blocks, currentTime]);
+  }, [selectedBlockId, playing, blocks, currentTime, costumes]);
 
   useEffect(() => {
     const el = timelineScrollRef.current;
@@ -1428,7 +1514,7 @@ export default function App() {
             className="timelineScroll"
             ref={timelineScrollRef}
             onMouseDown={startTimelinePan}
-            title="드래그 또는 마우스 휠로 좌우 이동 · +/− 키로 확대/축소 · C: 선택 블록 자르기 · SHIFT+C: 전체 트랙 자르기 · 블록 드래그 중 SHIFT: 자석처럼 스냅"
+            title="드래그 또는 마우스 휠로 좌우 이동 · +/− 키로 확대/축소 · C: 선택 블록 자르기 · SHIFT+C: 전체 트랙 자르기 · 블록 드래그 중 SHIFT: 자석처럼 스냅(다른 의상 블록에도 붙어요) · CTRL+Z: 되돌리기 · CTRL+SHIFT+Z: 다시 실행"
           >
             <div className="timelineContent" ref={contentRef} style={{ width: timelineW }}>
               <div className="ruler" onClick={(e) => seek(timeFromEvent(e))} title="클릭하면 그 위치로 이동해요">
