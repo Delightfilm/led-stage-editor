@@ -81,49 +81,117 @@ export async function getCloudSession() {
   return session;
 }
 
+const activeSession = async (fallback = null) => {
+  const stored = await getCloudSession();
+  if (stored?.access_token && stored?.user?.id) return stored;
+  if (fallback?.access_token && fallback?.user?.id) return fallback;
+  throw new Error("로그인이 필요해요.");
+};
+
+const authHeaders = (session) => ({
+  ...baseHeaders(),
+  Authorization: `Bearer ${session.access_token}`,
+});
+
 export async function signOutCloud() {
   const session = await getCloudSession();
   if (session?.access_token) {
     await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
       method: "POST",
-      headers: { ...baseHeaders(), Authorization: `Bearer ${session.access_token}` },
+      headers: authHeaders(session),
     }).catch(() => null);
   }
   clearSession();
 }
 
 export async function loadCloudProject(session) {
-  if (!session?.access_token || !session?.user?.id) return null;
+  const current = await activeSession(session);
   const query = new URLSearchParams({
     select: "project_name,project_data,updated_at",
-    user_id: `eq.${session.user.id}`,
+    user_id: `eq.${current.user.id}`,
     limit: "1",
   });
   const res = await fetch(`${SUPABASE_URL}/rest/v1/led_stage_user_projects?${query}`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${session.access_token}`,
-    },
+    headers: authHeaders(current),
   });
   const rows = await readJson(res);
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
 export async function saveCloudProject(session, projectData, projectName = "내 무대 프로젝트") {
-  if (!session?.access_token || !session?.user?.id) throw new Error("로그인이 필요해요.");
+  const current = await activeSession(session);
   const res = await fetch(`${SUPABASE_URL}/rest/v1/led_stage_user_projects?on_conflict=user_id`, {
     method: "POST",
     headers: {
-      ...baseHeaders(),
-      Authorization: `Bearer ${session.access_token}`,
+      ...authHeaders(current),
       Prefer: "resolution=merge-duplicates,return=representation",
     },
     body: JSON.stringify({
-      user_id: session.user.id,
+      user_id: current.user.id,
       project_name: projectName,
       project_data: projectData,
     }),
   });
   const rows = await readJson(res);
   return Array.isArray(rows) ? rows[0] : rows;
+}
+
+export async function createCloudVersion(session, projectData, projectName = "내 무대 프로젝트") {
+  const current = await activeSession(session);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/led_stage_project_versions`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(current),
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({
+      user_id: current.user.id,
+      project_name: projectName,
+      project_data: projectData,
+    }),
+  });
+  const rows = await readJson(res);
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+export async function listCloudVersions(session, limit = 20) {
+  const current = await activeSession(session);
+  const query = new URLSearchParams({
+    select: "id,project_name,project_data,created_at",
+    user_id: `eq.${current.user.id}`,
+    order: "created_at.desc",
+    limit: String(Math.max(1, Math.min(50, Number(limit) || 20))),
+  });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/led_stage_project_versions?${query}`, {
+    headers: authHeaders(current),
+  });
+  const rows = await readJson(res);
+  return Array.isArray(rows) ? rows : [];
+}
+
+export async function pruneCloudVersions(session, keep = 20) {
+  const current = await activeSession(session);
+  const query = new URLSearchParams({
+    select: "id",
+    user_id: `eq.${current.user.id}`,
+    order: "created_at.desc",
+  });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/led_stage_project_versions?${query}`, {
+    headers: authHeaders(current),
+  });
+  const rows = await readJson(res);
+  const ids = (Array.isArray(rows) ? rows : []).slice(Math.max(1, Number(keep) || 20)).map((row) => row.id);
+  if (!ids.length) return 0;
+
+  const idFilter = `in.(${ids.join(",")})`;
+  const deleteQuery = new URLSearchParams({
+    user_id: `eq.${current.user.id}`,
+    id: idFilter,
+  });
+  const del = await fetch(`${SUPABASE_URL}/rest/v1/led_stage_project_versions?${deleteQuery}`, {
+    method: "DELETE",
+    headers: authHeaders(current),
+  });
+  if (!del.ok) await readJson(del);
+  return ids.length;
 }
