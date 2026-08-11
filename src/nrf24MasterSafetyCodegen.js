@@ -1,18 +1,20 @@
-export function buildNrf24MasterSketch({ receiverCount = 8, showDurationMs = 180000, showHash = 0 } = {}) {
+export function buildNrf24MasterSketch({ receiverCount = 8, showDurationMs = 180000, receiverHashes = [] } = {}) {
   const count = Math.max(1, Math.min(8, Number(receiverCount) || 8));
   const duration = Math.max(0, Math.round(Number(showDurationMs) || 0));
-  const hash = Number(showHash) >>> 0;
-  const hashHex = `0x${hash.toString(16).padStart(8, "0").toUpperCase()}UL`;
+  const hashes = Array.from({ length: 8 }, (_, i) => Number(receiverHashes?.[i] || 0) >>> 0);
+  const hashRows = hashes
+    .map((hash) => `0x${hash.toString(16).padStart(8, "0").toUpperCase()}UL`)
+    .join(", ");
 
-  return `/* nRF24 EL Stage MASTER — show pre-flight build
+  return `/* nRF24 EL Stage MASTER — receiver pre-flight build
  * UNO + nRF24L01+PA+LNA + I2C 1602 LCD
  * nRF24: CE D9 / CSN D10 / MOSI D11 / MISO D12 / SCK D13
  * LCD: SDA A4 / SCL A5 / 5V / GND
  * ENABLE rocker: D2-GND, START rocker: D3-GND
  * LINK scan: about 0.5 s / receiver, FAIL after about 1.0 s without ACK.
- * PRE-FLIGHT: O=ready, X=link fail, V=show version mismatch, ?=version unknown.
+ * PRE-FLIGHT: O=ready, X=link fail, V=timeline version mismatch, ?=version unknown.
  * OVERRIDE: if PRE-FLIGHT is not ready, first START arms override; OFF->ON again within 5 s forces start.
- * SHOW HASH: ${hashHex}
+ * Each RX has its own expected timeline hash, so unchanged receivers do not need reflashing.
  */
 #include <SPI.h>
 #include <RF24.h>
@@ -26,7 +28,6 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #define START_PIN 3
 #define RECEIVER_COUNT ${count}
 #define SHOW_DURATION_MS ${duration}UL
-#define SHOW_HASH ${hashHex}
 #define START_LEAD_MS 300UL
 #define SYNC_INTERVAL_MS 100UL
 #define SHOW_STATE_INTERVAL_MS 100UL
@@ -38,6 +39,7 @@ const byte BROADCAST_ADDRESS[6] = "ELCMD";
 const byte RECEIVER_ADDRESSES[8][6] = {
   "EL001", "EL002", "EL003", "EL004", "EL005", "EL006", "EL007", "EL008"
 };
+const uint32_t EXPECTED_HASHES[8] = { ${hashRows} };
 
 const byte MAGIC = 0xA5;
 const byte STATUS_MAGIC = 0x5A;
@@ -139,12 +141,6 @@ bool allReady() {
   return true;
 }
 
-byte linkedCount() {
-  byte ok = 0;
-  for (byte i = 0; i < RECEIVER_COUNT; i++) if (linkOk[i]) ok++;
-  return ok;
-}
-
 byte readyCount() {
   byte ok = 0;
   for (byte i = 0; i < RECEIVER_COUNT; i++) {
@@ -174,7 +170,7 @@ void pingOne(byte i) {
       radio.read(&status, sizeof(status));
       if (status.magic == STATUS_MAGIC && status.receiverId == i + 1) {
         versionKnown[i] = true;
-        versionOk[i] = status.showHash == SHOW_HASH;
+        versionOk[i] = status.showHash == EXPECTED_HASHES[i];
       }
     }
   } else if (now - lastLinkOkMs[i] >= LINK_FAIL_MS) {
