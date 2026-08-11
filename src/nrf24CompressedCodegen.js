@@ -1,4 +1,4 @@
-import { buildNrf24MasterSketch } from "./nrf24Codegen.js";
+import { buildNrf24MasterSketch } from "./nrf24MasterSafetyCodegen.js";
 
 export { buildNrf24MasterSketch };
 
@@ -7,8 +7,10 @@ const rxAddr = (id) => `EL${String(id).padStart(3, "0")}`;
 const EVENT_TICK_MS = 20;
 const COMPACT16_MAX_TICK = 0x7fff;
 
-export function buildNrf24ReceiverSketch({ receiverId, costumeName, parts = [] }) {
+export function buildNrf24ReceiverSketch({ receiverId, costumeName, parts = [], showHash = 0 }) {
   const id = Math.max(1, Math.min(8, Number(receiverId) || 1));
+  const hash = Number(showHash) >>> 0;
+  const hashHex = `0x${hash.toString(16).padStart(8, "0").toUpperCase()}UL`;
   const normalized = (parts.length
     ? parts
     : [{ name: "EL", pin: 4, frames: [{ t: 0, on: false }], endMs: 0 }]
@@ -49,5 +51,250 @@ export function buildNrf24ReceiverSketch({ receiverId, costumeName, parts = [] }
     .map((p, i) => `  {${p.pin}, PART_${i}_FRAMES, PART_${i}_COUNT, 0}`)
     .join(",\n");
 
-  return `/* nRF24 EL Stage Receiver RX${id} — ${clean(costumeName || `의상 ${id}`)}\n * UNO + YL-105 + nRF24L01+PA+LNA\n * CE D9 / CSN D10 / MOSI D11 / MISO D12 / SCK D13\n * RF: CH90 / 250kbps / PA_HIGH\n * LINK address: ${rxAddr(id)} / Broadcast: ELCMD\n * Relay outputs are ACTIVE LOW by default.\n * Safe rejoin: missed START / radio dropout / receiver reboot can seek to current show position.\n * Timeline compression: ${EVENT_TICK_MS}ms tick + ON/OFF bit packed into ${bytesPerEvent} bytes/event.\n * Packed timeline data: ${totalEvents} events / about ${packedBytes} bytes in flash.\n */\n#include <SPI.h>\n#include <RF24.h>\n#include <avr/pgmspace.h>\n\nRF24 radio(9, 10);\n#define RECEIVER_ID ${id}\n#define RELAY_ACTIVE_LOW 1\n#define END_MS ${Math.max(0, Math.round(endMs))}UL\n#define EVENT_TICK_MS ${EVENT_TICK_MS}UL\n\nconst byte UNIQUE_ADDRESS[6] = "${rxAddr(id)}";\nconst byte BROADCAST_ADDRESS[6] = "ELCMD";\nconst byte MAGIC = 0xA5;\nconst byte FLAG_PLAYING = 0x01;\nconst byte CMD_PING = 1, CMD_SYNC = 2, CMD_START = 3, CMD_STOP = 4, CMD_SHOW_STATE = 5;\n\nstruct __attribute__((packed)) RadioPacket {\n  byte magic;\n  byte type;\n  byte target;\n  byte flags;\n  uint16_t seq;\n  uint32_t masterTimeMs;\n  uint32_t showStartMasterMs;\n};\nstatic_assert(sizeof(RadioPacket) <= 32, "nRF24 payload too large");\n\ntypedef ${packedType} PackedEvent;\n\n${frameBlocks}\n\nstruct PartRuntime { byte pin; const PackedEvent* frames; uint16_t frameCount; uint16_t nextIndex; };\nPartRuntime PARTS[] = {\n${runtime}\n};\nconst byte PART_COUNT = sizeof(PARTS) / sizeof(PARTS[0]);\n\nint32_t masterOffsetMs = 0;\nbool clockSynced = false;\nbool playing = false;\nuint16_t activeCueSeq = 0;\nuint32_t playbackStartMasterMs = 0;\n\nvoid writePart(byte pin, bool on) {\n#if RELAY_ACTIVE_LOW\n  digitalWrite(pin, on ? LOW : HIGH);\n#else\n  digitalWrite(pin, on ? HIGH : LOW);\n#endif\n}\n\nvoid allOff() {\n  for (byte i = 0; i < PART_COUNT; i++) writePart(PARTS[i].pin, false);\n}\n\nvoid resetTimeline() {\n  for (byte i = 0; i < PART_COUNT; i++) PARTS[i].nextIndex = 0;\n  allOff();\n}\n\nvoid syncClock(uint32_t masterMs) {\n  const int32_t observed = (int32_t)(masterMs - millis());\n  if (!clockSynced) {\n    masterOffsetMs = observed;\n    clockSynced = true;\n    return;\n  }\n  const int32_t error = observed - masterOffsetMs;\n  masterOffsetMs += error / 4;\n}\n\nuint32_t masterNow() {\n  return (uint32_t)((int32_t)millis() + masterOffsetMs);\n}\n\nuint32_t packedEventRaw(const PartRuntime& p, uint16_t i) {\n  return (uint32_t)${readFn}(&p.frames[i]);\n}\n\nuint32_t frameTime(const PartRuntime& p, uint16_t i) {\n  return (packedEventRaw(p, i) >> 1) * EVENT_TICK_MS;\n}\n\nbool frameOn(const PartRuntime& p, uint16_t i) {\n  return (packedEventRaw(p, i) & 0x01U) != 0;\n}\n\nvoid updateTimeline(uint32_t elapsed) {\n  for (byte n = 0; n < PART_COUNT; n++) {\n    PartRuntime& p = PARTS[n];\n    while (p.nextIndex < p.frameCount && frameTime(p, p.nextIndex) <= elapsed) {\n      writePart(p.pin, frameOn(p, p.nextIndex));\n      p.nextIndex++;\n    }\n  }\n}\n\n// Safe SEEK: never replay missed relay transitions rapidly.\n// Calculate only the correct state at the current show position.\nvoid seekTimeline(uint32_t elapsed) {\n  for (byte n = 0; n < PART_COUNT; n++) {\n    PartRuntime& p = PARTS[n];\n    bool currentOn = false;\n    uint16_t i = 0;\n    while (i < p.frameCount && frameTime(p, i) <= elapsed) {\n      currentOn = frameOn(p, i);\n      i++;\n    }\n    writePart(p.pin, currentOn);\n    p.nextIndex = i;\n  }\n}\n\nvoid stopPlayback() {\n  playing = false;\n  allOff();\n}\n\nvoid armOrRejoin(uint16_t seq, uint32_t showStartMs) {\n  activeCueSeq = seq;\n  playbackStartMasterMs = showStartMs;\n  playing = true;\n\n  const uint32_t now = masterNow();\n  if ((int32_t)(now - playbackStartMasterMs) < 0) {\n    resetTimeline();\n    return;\n  }\n\n  const uint32_t elapsed = now - playbackStartMasterMs;\n  if (elapsed >= END_MS) {\n    stopPlayback();\n    return;\n  }\n\n  seekTimeline(elapsed);\n}\n\nvoid setup() {\n  for (byte i = 0; i < PART_COUNT; i++) pinMode(PARTS[i].pin, OUTPUT);\n  allOff();\n\n  if (!radio.begin()) while (1) { allOff(); delay(500); }\n  radio.setDataRate(RF24_250KBPS);\n  radio.setChannel(90);\n  radio.setPALevel(RF24_PA_HIGH);\n  radio.setCRCLength(RF24_CRC_16);\n  radio.setAddressWidth(5);\n  radio.openReadingPipe(0, UNIQUE_ADDRESS);\n  radio.openReadingPipe(1, BROADCAST_ADDRESS);\n  radio.setAutoAck(0, true);\n  radio.setAutoAck(1, false);\n  radio.startListening();\n}\n\nvoid loop() {\n  byte pipe = 0;\n  while (radio.available(&pipe)) {\n    RadioPacket p;\n    radio.read(&p, sizeof(p));\n    if (p.magic != MAGIC) continue;\n    if (p.target != 0 && p.target != RECEIVER_ID) continue;\n\n    if (p.type == CMD_PING) continue;\n\n    if (p.type == CMD_SYNC) {\n      syncClock(p.masterTimeMs);\n      continue;\n    }\n\n    if (p.type == CMD_STOP) {\n      syncClock(p.masterTimeMs);\n      activeCueSeq = p.seq;\n      stopPlayback();\n      continue;\n    }\n\n    if (p.type == CMD_START) {\n      syncClock(p.masterTimeMs);\n      if (!playing || p.seq != activeCueSeq || p.showStartMasterMs != playbackStartMasterMs) {\n        armOrRejoin(p.seq, p.showStartMasterMs);\n      }\n      continue;\n    }\n\n    if (p.type == CMD_SHOW_STATE) {\n      syncClock(p.masterTimeMs);\n      const bool masterPlaying = (p.flags & FLAG_PLAYING) != 0;\n      if (!masterPlaying) {\n        if (playing) stopPlayback();\n        activeCueSeq = p.seq;\n        continue;\n      }\n\n      if (!playing || p.seq != activeCueSeq || p.showStartMasterMs != playbackStartMasterMs) {\n        armOrRejoin(p.seq, p.showStartMasterMs);\n      }\n      continue;\n    }\n  }\n\n  if (!playing || !clockSynced) return;\n  const uint32_t now = masterNow();\n  if ((int32_t)(now - playbackStartMasterMs) < 0) return;\n\n  const uint32_t elapsed = now - playbackStartMasterMs;\n  if (elapsed >= END_MS) {\n    stopPlayback();\n    return;\n  }\n  updateTimeline(elapsed);\n}\n`;
+  return `/* nRF24 EL Stage Receiver RX${id} — ${clean(costumeName || `의상 ${id}`)}
+ * UNO + YL-105 + nRF24L01+PA+LNA
+ * CE D9 / CSN D10 / MOSI D11 / MISO D12 / SCK D13
+ * RF: CH90 / 250kbps / PA_HIGH
+ * LINK address: ${rxAddr(id)} / Broadcast: ELCMD
+ * Relay outputs are ACTIVE LOW by default.
+ * Safe rejoin: missed START / radio dropout / receiver reboot can seek to current show position.
+ * Timeline compression: ${EVENT_TICK_MS}ms tick + ON/OFF bit packed into ${bytesPerEvent} bytes/event.
+ * Packed timeline data: ${totalEvents} events / about ${packedBytes} bytes in flash.
+ * SHOW HASH: ${hashHex}
+ */
+#include <SPI.h>
+#include <RF24.h>
+#include <avr/pgmspace.h>
+
+RF24 radio(9, 10);
+#define RECEIVER_ID ${id}
+#define RELAY_ACTIVE_LOW 1
+#define END_MS ${Math.max(0, Math.round(endMs))}UL
+#define EVENT_TICK_MS ${EVENT_TICK_MS}UL
+#define SHOW_HASH ${hashHex}
+
+const byte UNIQUE_ADDRESS[6] = "${rxAddr(id)}";
+const byte BROADCAST_ADDRESS[6] = "ELCMD";
+const byte MAGIC = 0xA5;
+const byte STATUS_MAGIC = 0x5A;
+const byte FLAG_PLAYING = 0x01;
+const byte CMD_PING = 1, CMD_SYNC = 2, CMD_START = 3, CMD_STOP = 4, CMD_SHOW_STATE = 5;
+
+struct __attribute__((packed)) RadioPacket {
+  byte magic;
+  byte type;
+  byte target;
+  byte flags;
+  uint16_t seq;
+  uint32_t masterTimeMs;
+  uint32_t showStartMasterMs;
+};
+
+struct __attribute__((packed)) ReceiverStatus {
+  byte magic;
+  byte receiverId;
+  uint16_t reserved;
+  uint32_t showHash;
+};
+
+static_assert(sizeof(RadioPacket) <= 32, "nRF24 payload too large");
+static_assert(sizeof(ReceiverStatus) <= 32, "nRF24 ACK payload too large");
+
+typedef ${packedType} PackedEvent;
+
+${frameBlocks}
+
+struct PartRuntime { byte pin; const PackedEvent* frames; uint16_t frameCount; uint16_t nextIndex; };
+PartRuntime PARTS[] = {
+${runtime}
+};
+const byte PART_COUNT = sizeof(PARTS) / sizeof(PARTS[0]);
+
+ReceiverStatus statusPayload = { STATUS_MAGIC, RECEIVER_ID, 0, SHOW_HASH };
+int32_t masterOffsetMs = 0;
+bool clockSynced = false;
+bool playing = false;
+uint16_t activeCueSeq = 0;
+uint32_t playbackStartMasterMs = 0;
+
+void loadStatusAck() {
+  radio.writeAckPayload(0, &statusPayload, sizeof(statusPayload));
+}
+
+void writePart(byte pin, bool on) {
+#if RELAY_ACTIVE_LOW
+  digitalWrite(pin, on ? LOW : HIGH);
+#else
+  digitalWrite(pin, on ? HIGH : LOW);
+#endif
+}
+
+void allOff() {
+  for (byte i = 0; i < PART_COUNT; i++) writePart(PARTS[i].pin, false);
+}
+
+void resetTimeline() {
+  for (byte i = 0; i < PART_COUNT; i++) PARTS[i].nextIndex = 0;
+  allOff();
+}
+
+void syncClock(uint32_t masterMs) {
+  const int32_t observed = (int32_t)(masterMs - millis());
+  if (!clockSynced) {
+    masterOffsetMs = observed;
+    clockSynced = true;
+    return;
+  }
+  const int32_t error = observed - masterOffsetMs;
+  masterOffsetMs += error / 4;
+}
+
+uint32_t masterNow() {
+  return (uint32_t)((int32_t)millis() + masterOffsetMs);
+}
+
+uint32_t packedEventRaw(const PartRuntime& p, uint16_t i) {
+  return (uint32_t)${readFn}(&p.frames[i]);
+}
+
+uint32_t frameTime(const PartRuntime& p, uint16_t i) {
+  return (packedEventRaw(p, i) >> 1) * EVENT_TICK_MS;
+}
+
+bool frameOn(const PartRuntime& p, uint16_t i) {
+  return (packedEventRaw(p, i) & 0x01U) != 0;
+}
+
+void updateTimeline(uint32_t elapsed) {
+  for (byte n = 0; n < PART_COUNT; n++) {
+    PartRuntime& p = PARTS[n];
+    while (p.nextIndex < p.frameCount && frameTime(p, p.nextIndex) <= elapsed) {
+      writePart(p.pin, frameOn(p, p.nextIndex));
+      p.nextIndex++;
+    }
+  }
+}
+
+// Safe SEEK: never replay missed relay transitions rapidly.
+// Calculate only the correct state at the current show position.
+void seekTimeline(uint32_t elapsed) {
+  for (byte n = 0; n < PART_COUNT; n++) {
+    PartRuntime& p = PARTS[n];
+    bool currentOn = false;
+    uint16_t i = 0;
+    while (i < p.frameCount && frameTime(p, i) <= elapsed) {
+      currentOn = frameOn(p, i);
+      i++;
+    }
+    writePart(p.pin, currentOn);
+    p.nextIndex = i;
+  }
+}
+
+void stopPlayback() {
+  playing = false;
+  allOff();
+}
+
+void armOrRejoin(uint16_t seq, uint32_t showStartMs) {
+  activeCueSeq = seq;
+  playbackStartMasterMs = showStartMs;
+  playing = true;
+
+  const uint32_t now = masterNow();
+  if ((int32_t)(now - playbackStartMasterMs) < 0) {
+    resetTimeline();
+    return;
+  }
+
+  const uint32_t elapsed = now - playbackStartMasterMs;
+  if (elapsed >= END_MS) {
+    stopPlayback();
+    return;
+  }
+
+  seekTimeline(elapsed);
+}
+
+void setup() {
+  for (byte i = 0; i < PART_COUNT; i++) pinMode(PARTS[i].pin, OUTPUT);
+  allOff();
+
+  if (!radio.begin()) while (1) { allOff(); delay(500); }
+  radio.setDataRate(RF24_250KBPS);
+  radio.setChannel(90);
+  radio.setPALevel(RF24_PA_HIGH);
+  radio.setCRCLength(RF24_CRC_16);
+  radio.setAddressWidth(5);
+  radio.enableAckPayload();
+  radio.openReadingPipe(0, UNIQUE_ADDRESS);
+  radio.openReadingPipe(1, BROADCAST_ADDRESS);
+  radio.setAutoAck(0, true);
+  radio.setAutoAck(1, false);
+  loadStatusAck();
+  radio.startListening();
+}
+
+void loop() {
+  byte pipe = 0;
+  while (radio.available(&pipe)) {
+    RadioPacket p;
+    radio.read(&p, sizeof(p));
+    if (p.magic != MAGIC) continue;
+    if (p.target != 0 && p.target != RECEIVER_ID) continue;
+
+    if (p.type == CMD_PING) {
+      // The preloaded ACK payload was consumed by this PING. Refill it for the next PING.
+      loadStatusAck();
+      continue;
+    }
+
+    if (p.type == CMD_SYNC) {
+      syncClock(p.masterTimeMs);
+      continue;
+    }
+
+    if (p.type == CMD_STOP) {
+      syncClock(p.masterTimeMs);
+      activeCueSeq = p.seq;
+      stopPlayback();
+      continue;
+    }
+
+    if (p.type == CMD_START) {
+      syncClock(p.masterTimeMs);
+      if (!playing || p.seq != activeCueSeq || p.showStartMasterMs != playbackStartMasterMs) {
+        armOrRejoin(p.seq, p.showStartMasterMs);
+      }
+      continue;
+    }
+
+    if (p.type == CMD_SHOW_STATE) {
+      syncClock(p.masterTimeMs);
+      const bool masterPlaying = (p.flags & FLAG_PLAYING) != 0;
+      if (!masterPlaying) {
+        if (playing) stopPlayback();
+        activeCueSeq = p.seq;
+        continue;
+      }
+
+      if (!playing || p.seq != activeCueSeq || p.showStartMasterMs != playbackStartMasterMs) {
+        armOrRejoin(p.seq, p.showStartMasterMs);
+      }
+      continue;
+    }
+  }
+
+  if (!playing || !clockSynced) return;
+  const uint32_t now = masterNow();
+  if ((int32_t)(now - playbackStartMasterMs) < 0) return;
+
+  const uint32_t elapsed = now - playbackStartMasterMs;
+  if (elapsed >= END_MS) {
+    stopPlayback();
+    return;
+  }
+  updateTimeline(elapsed);
+}
+`;
 }
