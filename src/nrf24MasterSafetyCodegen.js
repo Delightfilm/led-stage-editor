@@ -15,7 +15,7 @@ export function buildNrf24MasterSketch({ receiverCount = 7, showDurationMs = 180
  * Default receiver count: 7 costumes.
  * LINK scan: about 0.5 s / receiver, FAIL after about 1.0 s without ACK.
  * PRE-FLIGHT: O=ready, X=link fail, V=timeline version mismatch, ?=version unknown.
- * START is allowed only when every configured receiver passes LINK + HASH pre-flight.
+ * START is always allowed; offline receivers may rejoin later at the current show position.
  * RX units keep their local timeline running through RF dropouts and rejoin at the current show position.
  * Each RX has its own expected timeline hash, so unchanged receivers do not need reflashing.
  * RF FIX: broadcast packets use per-packet NO_ACK. AutoAck/ACK-payload stays enabled for link PINGs.
@@ -217,9 +217,8 @@ void requestStart() {
   // or restart the timeline. The next start is allowed only after natural finish.
   if (showPlaying) return;
 
-  // No override path: refuse START unless every configured receiver is ready.
-  if (!allReady()) return;
-
+  // Start the show even if some receivers are currently offline.
+  // A receiver that reconnects later uses SHOW_STATE to seek to the current position.
   sendStart();
 }
 
