@@ -15,8 +15,7 @@ export function buildNrf24MasterSketch({ receiverCount = 7, showDurationMs = 180
  * Default receiver count: 7 costumes.
  * LINK scan: about 0.5 s / receiver, FAIL after about 1.0 s without ACK.
  * PRE-FLIGHT: O=ready, X=link fail, V=timeline version mismatch, ?=version unknown.
- * OVERRIDE: if PRE-FLIGHT is not ready, first D2 OFF->ON arms override;
- *           toggle ON->OFF->ON again within 5 s to force start.
+ * START is allowed only when every configured receiver passes LINK + HASH pre-flight.
  * RX units keep their local timeline running through RF dropouts and rejoin at the current show position.
  * Each RX has its own expected timeline hash, so unchanged receivers do not need reflashing.
  * RF FIX: broadcast packets use per-packet NO_ACK. AutoAck/ACK-payload stays enabled for link PINGs.
@@ -37,7 +36,6 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #define SHOW_STATE_INTERVAL_MS 100UL
 #define LINK_SCAN_INTERVAL_MS 60UL
 #define LINK_FAIL_MS 1000UL
-#define OVERRIDE_WINDOW_MS 5000UL
 
 const byte BROADCAST_ADDRESS[6] = "ELCMD";
 const byte RECEIVER_ADDRESSES[8][6] = {
@@ -85,8 +83,6 @@ uint32_t lastShowStateMs = 0;
 uint32_t lastScanMs = 0;
 
 bool lastStart = false;
-bool overrideArmed = false;
-uint32_t overrideUntilMs = 0;
 
 RadioPacket makePacket(byte type, byte target = 0) {
   RadioPacket p = {};
@@ -125,7 +121,6 @@ void sendStart() {
   cueSeq++;
   showStartMasterMs = millis() + START_LEAD_MS;
   showPlaying = true;
-  overrideArmed = false;
   broadcastPacket(CMD_START, 5);
   lastShowStateMs = 0;
 }
@@ -136,7 +131,6 @@ void finishShow() {
   cueSeq++;
   showPlaying = false;
   showStartMasterMs = 0;
-  overrideArmed = false;
   broadcastPacket(CMD_STOP, 5);
   lastShowStateMs = 0;
 }
@@ -208,9 +202,7 @@ void drawStatusRow() {
 
 void drawLcd() {
   lcd.setCursor(0, 0);
-  if (overrideArmed && (int32_t)(overrideUntilMs - millis()) > 0) {
-    printPadded("1234567 OVR");
-  } else if (showPlaying) {
+  if (showPlaying) {
     printPadded("1234567 PLAY");
   } else {
     printPadded("1234567 READY");
@@ -225,20 +217,10 @@ void requestStart() {
   // or restart the timeline. The next start is allowed only after natural finish.
   if (showPlaying) return;
 
-  if (allReady()) {
-    sendStart();
-    return;
-  }
+  // No override path: refuse START unless every configured receiver is ready.
+  if (!allReady()) return;
 
-  const uint32_t now = millis();
-  if (overrideArmed && (int32_t)(overrideUntilMs - now) > 0) {
-    sendStart();
-    return;
-  }
-
-  overrideArmed = true;
-  overrideUntilMs = now + OVERRIDE_WINDOW_MS;
-  drawLcd();
+  sendStart();
 }
 
 void setup() {
@@ -277,11 +259,6 @@ void setup() {
 
 void loop() {
   const uint32_t now = millis();
-
-  if (overrideArmed && (int32_t)(now - overrideUntilMs) >= 0) {
-    overrideArmed = false;
-    drawLcd();
-  }
 
   if (now - lastSyncMs >= SYNC_INTERVAL_MS) {
     lastSyncMs = now;
