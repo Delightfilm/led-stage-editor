@@ -7,6 +7,7 @@ import { premiereVideoEditorPrePlugin } from './scripts/premiereVideoEditorPrePl
 import { premiereTimelinePolishPlugin } from './scripts/premiereTimelinePolishPlugin.js'
 import { premiereTimelineProPlugin } from './scripts/premiereTimelineProPlugin.js'
 import { premiereShiftSnapFixPlugin } from './scripts/premiereShiftSnapFixPlugin.js'
+import { premiereTimelineViewportPlugin } from './scripts/premiereTimelineViewportPlugin.js'
 import { cloudMediaStoragePlugin } from './scripts/cloudMediaStoragePlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
@@ -20,6 +21,7 @@ export default defineConfig({
     premiereTimelinePolishPlugin(),
     premiereTimelineProPlugin(),
     premiereShiftSnapFixPlugin(),
+    premiereTimelineViewportPlugin(),
     cloudMediaStoragePlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
