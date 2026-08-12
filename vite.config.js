@@ -19,6 +19,7 @@ import { formationWidthResizePlugin } from './scripts/formationWidthResizePlugin
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
 // https://vite.dev/config/
+// production deployment trigger: formation memory + resizable stage
 export default defineConfig({
   plugins: [
     defaultRelayPinPlugin(),
