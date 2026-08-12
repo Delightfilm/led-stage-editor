@@ -19,6 +19,7 @@ export function buildNrf24MasterSketch({ receiverCount = 7, showDurationMs = 180
  *           toggle ON->OFF->ON again within 5 s to force start.
  * RX units keep their local timeline running through RF dropouts and rejoin at the current show position.
  * Each RX has its own expected timeline hash, so unchanged receivers do not need reflashing.
+ * RF FIX: broadcast packets use per-packet NO_ACK. AutoAck/ACK-payload stays enabled for link PINGs.
  */
 #include <SPI.h>
 #include <RF24.h>
@@ -101,7 +102,6 @@ RadioPacket makePacket(byte type, byte target = 0) {
 
 void broadcastPacket(byte type, byte repeats = 1) {
   radio.stopListening();
-  radio.setAutoAck(false);
   radio.openWritingPipe(BROADCAST_ADDRESS);
 
   RadioPacket p = makePacket(type, 0);
@@ -110,7 +110,10 @@ void broadcastPacket(byte type, byte repeats = 1) {
     p.flags = showPlaying ? FLAG_PLAYING : 0;
     p.seq = cueSeq;
     p.showStartMasterMs = showStartMasterMs;
-    radio.write(&p, sizeof(p));
+
+    // multicast=true sends this ONE packet with NO_ACK while preserving
+    // AutoAck + ACK-payload configuration for the individual PINGs.
+    radio.write(&p, sizeof(p), true);
     if (repeats > 1) delay(3);
   }
 }
@@ -155,9 +158,8 @@ byte readyCount() {
 
 void pingOne(byte i) {
   radio.stopListening();
-  radio.setAutoAck(true);
-  radio.setRetries(3, 5);
   radio.openWritingPipe(RECEIVER_ADDRESSES[i]);
+  radio.setRetries(3, 5);
 
   RadioPacket p = makePacket(CMD_PING, i + 1);
   const bool ok = radio.write(&p, sizeof(p));
@@ -257,7 +259,12 @@ void setup() {
   radio.setPALevel(RF24_PA_HIGH);
   radio.setCRCLength(RF24_CRC_16);
   radio.setAddressWidth(5);
+
+  // Keep AutoAck and ACK payloads enabled permanently for individual PINGs.
+  // Broadcasts use the per-packet NO_ACK flag instead of changing EN_AA globally.
+  radio.setAutoAck(true);
   radio.enableAckPayload();
+  radio.enableDynamicAck();
 
   // Edge-triggered START: if D2 is already ON during power-up,
   // turn it OFF and then ON once to start the show.
