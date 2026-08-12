@@ -12,6 +12,7 @@ import { cloudMediaStoragePlugin } from './scripts/cloudMediaStoragePlugin.js'
 import { premiereEditingWorkflowPlugin } from './scripts/premiereEditingWorkflowPlugin.js'
 import { premiereProgramAspectFixPlugin } from './scripts/premiereProgramAspectFixPlugin.js'
 import { premiereSingleTrackOverwritePlugin } from './scripts/premiereSingleTrackOverwritePlugin.js'
+import { premiereWorkspaceCleanupPlugin } from './scripts/premiereWorkspaceCleanupPlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
 // https://vite.dev/config/
@@ -29,6 +30,7 @@ export default defineConfig({
     premiereEditingWorkflowPlugin(),
     premiereProgramAspectFixPlugin(),
     premiereSingleTrackOverwritePlugin(),
+    premiereWorkspaceCleanupPlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
   ],
