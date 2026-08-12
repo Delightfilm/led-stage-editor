@@ -16,10 +16,11 @@ import { premiereWorkspaceCleanupPlugin } from './scripts/premiereWorkspaceClean
 import { choreographyFormationPlugin } from './scripts/choreographyFormationPlugin.js'
 import { formationMemorySidebarPlugin } from './scripts/formationMemorySidebarPlugin.js'
 import { formationWidthResizePlugin } from './scripts/formationWidthResizePlugin.js'
+import { fineBlockTimingPlugin } from './scripts/fineBlockTimingPlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
 // https://vite.dev/config/
-// production deployment trigger: formation memory + resizable stage
+// production deployment trigger: 10ms solid cue timing
 export default defineConfig({
   plugins: [
     defaultRelayPinPlugin(),
@@ -38,6 +39,7 @@ export default defineConfig({
     choreographyFormationPlugin(),
     formationMemorySidebarPlugin(),
     formationWidthResizePlugin(),
+    fineBlockTimingPlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
   ],
