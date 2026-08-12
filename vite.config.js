@@ -17,10 +17,11 @@ import { choreographyFormationPlugin } from './scripts/choreographyFormationPlug
 import { formationMemorySidebarPlugin } from './scripts/formationMemorySidebarPlugin.js'
 import { formationWidthResizePlugin } from './scripts/formationWidthResizePlugin.js'
 import { fineBlockTimingPlugin } from './scripts/fineBlockTimingPlugin.js'
+import { defaultTimelineOpenPlugin } from './scripts/defaultTimelineOpenPlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
 // https://vite.dev/config/
-// production deployment trigger: 10ms solid cue timing
+// production deployment trigger: timeline tracks open by default
 export default defineConfig({
   plugins: [
     defaultRelayPinPlugin(),
@@ -40,6 +41,7 @@ export default defineConfig({
     formationMemorySidebarPlugin(),
     formationWidthResizePlugin(),
     fineBlockTimingPlugin(),
+    defaultTimelineOpenPlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
   ],
