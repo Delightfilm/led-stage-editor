@@ -11,6 +11,7 @@ import { premiereTimelineViewportPlugin } from './scripts/premiereTimelineViewpo
 import { cloudMediaStoragePlugin } from './scripts/cloudMediaStoragePlugin.js'
 import { premiereEditingWorkflowPlugin } from './scripts/premiereEditingWorkflowPlugin.js'
 import { premiereProgramAspectFixPlugin } from './scripts/premiereProgramAspectFixPlugin.js'
+import { premiereSingleTrackOverwritePlugin } from './scripts/premiereSingleTrackOverwritePlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
 // https://vite.dev/config/
@@ -27,6 +28,7 @@ export default defineConfig({
     cloudMediaStoragePlugin(),
     premiereEditingWorkflowPlugin(),
     premiereProgramAspectFixPlugin(),
+    premiereSingleTrackOverwritePlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
   ],
