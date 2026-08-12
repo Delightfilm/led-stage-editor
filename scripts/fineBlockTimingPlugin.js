@@ -75,8 +75,8 @@ export function fineBlockTimingPlugin() {
       )
 
       replaceStrict(
-        '          if (b.id !== d.id) return b;\n          if (d.mode === "move") {',
-        '          if (b.id !== d.id) return b;\n          const minDur = b.type === "solid" ? 0.01 : 0.2;\n          if (d.mode === "move") {',
+        '        return bs.map((b) => {\n          if (b.id !== d.id) return b;\n\n          if (d.mode === "move") {',
+        '        return bs.map((b) => {\n          if (b.id !== d.id) return b;\n          const minDur = b.type === "solid" ? 0.01 : 0.2;\n\n          if (d.mode === "move") {',
         'drag minimum helper'
       )
       replaceAllStrict('d.s0 + d.d0 - 0.2', 'd.s0 + d.d0 - minDur', 'left resize minimum')
