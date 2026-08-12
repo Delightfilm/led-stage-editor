@@ -5,12 +5,12 @@ export function buildNrf24MasterSketch(args) {
 
   code = code.replace(
     " * RF FIX: broadcast packets use per-packet NO_ACK. AutoAck/ACK-payload stays enabled for link PINGs.",
-    " * RF MODE: performance commands use each RX unique address instead of the ELCMD broadcast pipe.\n * START/STOP use AutoAck; periodic SYNC/SHOW_STATE use per-packet NO_ACK on each unique address."
+    " * RF MODE: START uses a low-latency ELCMD broadcast with per-packet NO_ACK.\n * STOP uses each RX unique address with AutoAck; periodic SYNC/SHOW_STATE use per-packet NO_ACK on each unique address.\n * Missed START packets are recovered by periodic SHOW_STATE safe-rejoin messages."
   );
 
   code = code.replace(
     "#define START_LEAD_MS 300UL",
-    "#define START_LEAD_MS 600UL"
+    "#define START_LEAD_MS 80UL"
   );
 
   const oldTransport = `void broadcastPacket(byte type, byte repeats = 1) {
@@ -71,6 +71,23 @@ void sendAllReceivers(byte type, bool requestAck = false, byte repeats = 1) {
   }
 }
 
+void sendBroadcastNoAck(byte type, byte repeats = 1) {
+  radio.stopListening();
+  radio.openWritingPipe(BROADCAST_ADDRESS);
+
+  RadioPacket p = makePacket(type, 0);
+  for (byte r = 0; r < repeats; r++) {
+    p.masterTimeMs = millis();
+    p.flags = showPlaying ? FLAG_PLAYING : 0;
+    p.seq = cueSeq;
+    p.showStartMasterMs = showStartMasterMs;
+    // The shared START packet is intentionally sent without waiting for ACKs.
+    // All receivers get the same future showStartMasterMs, preserving sync.
+    radio.write(&p, sizeof(p), true);
+    if (repeats > 1) delay(2);
+  }
+}
+
 void sendSync() { sendAllReceivers(CMD_SYNC, false, 1); }
 void sendShowState() { sendAllReceivers(CMD_SHOW_STATE, false, 1); }`;
 
@@ -81,7 +98,7 @@ void sendShowState() { sendAllReceivers(CMD_SHOW_STATE, false, 1); }`;
 
   code = code.replace(
     "  broadcastPacket(CMD_START, 5);",
-    "  // Same future start time is sent to every receiver, so sequential RF writes\n  // do not create sequential costume starts.\n  sendAllReceivers(CMD_START, true, 2);"
+    "  // Low-latency show trigger: one shared START is repeated quickly without ACK waits.\n  // If a receiver misses all START copies, periodic SHOW_STATE will safe-rejoin it.\n  sendBroadcastNoAck(CMD_START, 5);"
   );
 
   code = code.replace(
