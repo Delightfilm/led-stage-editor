@@ -11,8 +11,7 @@ export function formationWidthResizePlugin() {
         out = out.replace(from, to)
       }
 
-      // Keep a local fallback immediately available on refresh. Supabase remains
-      // the cross-device source of truth once the cloud session has loaded.
+      // Local fallback makes refresh immediate; Supabase remains the cross-device source of truth.
       replaceStrict(
         '  const [formations, setFormations] = useState([]);',
         [
@@ -46,15 +45,13 @@ export function formationWidthResizePlugin() {
         'size state'
       )
 
-      const refAnchor = '  const formationDragRef = useRef(null);'
       replaceStrict(
-        refAnchor,
-        refAnchor + '\n  const formationPersistTimerRef = useRef(null);',
+        '  const formationDragRef = useRef(null);',
+        '  const formationDragRef = useRef(null);\n  const formationPersistTimerRef = useRef(null);',
         'persistence timer ref'
       )
 
-      // Add editor dimensions to the same project_data JSONB that already stores
-      // timeline blocks and formation keyframes. No DB schema change is required.
+      // Store both formation keyframes and editor dimensions in the existing JSONB project_data.
       replaceStrict(
         '    customPresets,\n    formations,\n  });',
         '    customPresets,\n    formations,\n    formationView: { width: formationWidth, height: formationHeight },\n  });',
@@ -66,40 +63,27 @@ export function formationWidthResizePlugin() {
         'local formation view data'
       )
 
-      // Cloud restore: use Supabase formations when present. Older cloud records
-      // without the field no longer wipe a valid local fallback during refresh.
-      replaceStrict(
-        '    setFormations(Array.isArray(data.formations) ? data.formations : []);',
-        [
-          '    if (Array.isArray(data.formations)) {',
-          '      setFormations(data.formations);',
-          '      try { localStorage.setItem("led-stage-formations-v1", JSON.stringify(data.formations)); } catch {}',
-          '    }',
-          '    if (data.formationView && typeof data.formationView === "object") {',
-          '      const w = Number(data.formationView.width);',
-          '      const h = Number(data.formationView.height);',
-          '      if (Number.isFinite(w) && w >= 560) { setFormationWidth(w); try { localStorage.setItem("led-stage-formation-width", String(w)); } catch {} }',
-          '      if (Number.isFinite(h) && h >= 180) { setFormationHeight(h); try { localStorage.setItem("led-stage-formation-height", String(h)); } catch {} }',
-          '    }',
-        ].join('\n'),
-        'cloud formation restore'
-      )
-      replaceStrict(
-        '      setFormations(Array.isArray(data.formations) ? data.formations : []);',
-        [
-          '      if (Array.isArray(data.formations)) {',
-          '        setFormations(data.formations);',
-          '        try { localStorage.setItem("led-stage-formations-v1", JSON.stringify(data.formations)); } catch {}',
-          '      }',
-          '      if (data.formationView && typeof data.formationView === "object") {',
-          '        const w = Number(data.formationView.width);',
-          '        const h = Number(data.formationView.height);',
-          '        if (Number.isFinite(w) && w >= 560) { setFormationWidth(w); try { localStorage.setItem("led-stage-formation-width", String(w)); } catch {} }',
-          '        if (Number.isFinite(h) && h >= 180) { setFormationHeight(h); try { localStorage.setItem("led-stage-formation-height", String(h)); } catch {} }',
-          '      }',
-        ].join('\n'),
-        'local formation restore'
-      )
+      const restoreNeedle = 'setFormations(Array.isArray(data.formations) ? data.formations : []);'
+      if (!out.includes(restoreNeedle)) throw new Error('formation resize: formation restore anchor not found')
+      const restoreBlock = [
+        'if (Array.isArray(data.formations)) {',
+        '  setFormations(data.formations);',
+        '  try { localStorage.setItem("led-stage-formations-v1", JSON.stringify(data.formations)); } catch {}',
+        '}',
+        'if (data.formationView && typeof data.formationView === "object") {',
+        '  const restoredFormationWidth = Number(data.formationView.width);',
+        '  const restoredFormationHeight = Number(data.formationView.height);',
+        '  if (Number.isFinite(restoredFormationWidth) && restoredFormationWidth >= 560) {',
+        '    setFormationWidth(restoredFormationWidth);',
+        '    try { localStorage.setItem("led-stage-formation-width", String(restoredFormationWidth)); } catch {}',
+        '  }',
+        '  if (Number.isFinite(restoredFormationHeight) && restoredFormationHeight >= 180) {',
+        '    setFormationHeight(restoredFormationHeight);',
+        '    try { localStorage.setItem("led-stage-formation-height", String(restoredFormationHeight)); } catch {}',
+        '  }',
+        '}',
+      ].join('\n')
+      out = out.replaceAll(restoreNeedle, restoreBlock)
 
       const helperAnchor = '  const startFormationDrag = (e, costumeId) => {'
       const helper = [
@@ -140,9 +124,7 @@ export function formationWidthResizePlugin() {
       ].join('\n')
       replaceStrict(helperAnchor, helper + helperAnchor, 'resize helper')
 
-      // Fast, dedicated persistence for formations. The generic project autosave
-      // also contains these fields, but this shorter debounce prevents a refresh
-      // right after editing from losing the latest formation state.
+      // Dedicated 600ms debounce for formation data so a quick refresh cannot beat the generic autosave.
       const selectedBlockAnchor = '  const selectedBlock = blocks.find((b) => b.id === selectedBlockId) || null;'
       const persistEffect = [
         '  useEffect(() => {',
