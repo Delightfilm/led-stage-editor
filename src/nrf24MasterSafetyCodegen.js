@@ -10,11 +10,14 @@ export function buildNrf24MasterSketch({ receiverCount = 7, showDurationMs = 180
  * UNO + nRF24L01+PA+LNA + I2C 1602 LCD
  * nRF24: CE D9 / CSN D10 / MOSI D11 / MISO D12 / SCK D13
  * LCD: SDA A4 / SCL A5 / 5V / GND
- * ENABLE rocker: D2-GND (LOW=ON, OPEN=OFF), START rocker: D3-GND
+ * START rocker: D2-GND (OFF->ON starts the show). D3 is unused.
+ * Once PLAY starts, D2 changes do NOT stop or restart the running show.
  * Default receiver count: 7 costumes.
  * LINK scan: about 0.5 s / receiver, FAIL after about 1.0 s without ACK.
  * PRE-FLIGHT: O=ready, X=link fail, V=timeline version mismatch, ?=version unknown.
- * OVERRIDE: if PRE-FLIGHT is not ready, first START arms override; OFF->ON again within 5 s forces start.
+ * OVERRIDE: if PRE-FLIGHT is not ready, first D2 OFF->ON arms override;
+ *           toggle ON->OFF->ON again within 5 s to force start.
+ * RX units keep their local timeline running through RF dropouts and rejoin at the current show position.
  * Each RX has its own expected timeline hash, so unchanged receivers do not need reflashing.
  */
 #include <SPI.h>
@@ -25,8 +28,7 @@ export function buildNrf24MasterSketch({ receiverCount = 7, showDurationMs = 180
 RF24 radio(9, 10);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-#define ENABLE_PIN 2
-#define START_PIN 3
+#define START_PIN 2
 #define RECEIVER_COUNT ${count}
 #define SHOW_DURATION_MS ${duration}UL
 #define START_LEAD_MS 300UL
@@ -81,7 +83,6 @@ uint32_t lastSyncMs = 0;
 uint32_t lastShowStateMs = 0;
 uint32_t lastScanMs = 0;
 
-bool lastEnable = false;
 bool lastStart = false;
 bool overrideArmed = false;
 uint32_t overrideUntilMs = 0;
@@ -126,7 +127,9 @@ void sendStart() {
   lastShowStateMs = 0;
 }
 
-void sendStop() {
+// Used only when the programmed show duration has naturally finished.
+// D2 never calls this during an active show.
+void finishShow() {
   cueSeq++;
   showPlaying = false;
   showStartMasterMs = 0;
@@ -187,24 +190,7 @@ void printPadded(const char* text) {
   while (n++ < 16) lcd.print(' ');
 }
 
-void drawLcd() {
-  if (overrideArmed && (int32_t)(overrideUntilMs - millis()) > 0) {
-    lcd.setCursor(0, 0);
-    lcd.print("PREFLIGHT ");
-    lcd.print(readyCount());
-    lcd.print('/');
-    lcd.print(RECEIVER_COUNT);
-    lcd.print("   ");
-    lcd.setCursor(0, 1);
-    printPadded("START=OVERRIDE");
-    return;
-  }
-
-  lcd.setCursor(0, 0);
-  if (lastEnable) printPadded("MASTER ON  7RX");
-  else printPadded("MASTER OFF 7RX");
-
-  lcd.setCursor(0, 1);
+void drawStatusRow() {
   for (byte i = 0; i < RECEIVER_COUNT; i++) {
     if (!linkOk[i]) lcd.print('X');
     else if (!versionKnown[i]) lcd.print('?');
@@ -215,13 +201,27 @@ void drawLcd() {
   lcd.print(readyCount());
   lcd.print('/');
   lcd.print(RECEIVER_COUNT);
-  if (showPlaying) lcd.print(" P");
-  else lcd.print("  ");
-  lcd.print("   ");
+  lcd.print("     ");
+}
+
+void drawLcd() {
+  lcd.setCursor(0, 0);
+  if (overrideArmed && (int32_t)(overrideUntilMs - millis()) > 0) {
+    printPadded("1234567 OVR");
+  } else if (showPlaying) {
+    printPadded("1234567 PLAY");
+  } else {
+    printPadded("1234567 READY");
+  }
+
+  lcd.setCursor(0, 1);
+  drawStatusRow();
 }
 
 void requestStart() {
-  if (!lastEnable) return;
+  // Once a show is running, physical switch movement must not interrupt
+  // or restart the timeline. The next start is allowed only after natural finish.
+  if (showPlaying) return;
 
   if (allReady()) {
     sendStart();
@@ -240,7 +240,6 @@ void requestStart() {
 }
 
 void setup() {
-  pinMode(ENABLE_PIN, INPUT_PULLUP);
   pinMode(START_PIN, INPUT_PULLUP);
 
   lcd.init();
@@ -260,11 +259,9 @@ void setup() {
   radio.setAddressWidth(5);
   radio.enableAckPayload();
 
-  lastEnable = digitalRead(ENABLE_PIN) == LOW;
+  // Edge-triggered START: if D2 is already ON during power-up,
+  // turn it OFF and then ON once to start the show.
   lastStart = digitalRead(START_PIN) == LOW;
-
-  if (lastEnable) sendShowState();
-  else sendStop();
 
   delay(300);
   lcd.clear();
@@ -298,35 +295,20 @@ void loop() {
 
   if (showPlaying && SHOW_DURATION_MS > 0 && (int32_t)(now - showStartMasterMs) >= 0) {
     const uint32_t elapsed = now - showStartMasterMs;
-    if (elapsed >= SHOW_DURATION_MS) sendStop();
-  }
-
-  const bool enable = digitalRead(ENABLE_PIN) == LOW;
-  const bool start = digitalRead(START_PIN) == LOW;
-
-  if (enable != lastEnable) {
-    delay(20);
-    const bool v = digitalRead(ENABLE_PIN) == LOW;
-    if (v != lastEnable) {
-      lastEnable = v;
-      if (v) {
-        showPlaying = false;
-        showStartMasterMs = 0;
-        overrideArmed = false;
-        sendShowState();
-      } else {
-        sendStop();
-      }
+    if (elapsed >= SHOW_DURATION_MS) {
+      finishShow();
       drawLcd();
     }
   }
 
+  const bool start = digitalRead(START_PIN) == LOW;
   if (start != lastStart) {
     delay(20);
     const bool v = digitalRead(START_PIN) == LOW;
     if (v != lastStart) {
       lastStart = v;
-      if (v) requestStart();
+      if (v) requestStart();  // OFF -> ON only
+      // ON -> OFF only rearms the physical switch; it never sends STOP.
     }
   }
 }
