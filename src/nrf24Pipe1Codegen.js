@@ -27,10 +27,12 @@ export function buildNrf24ReceiverSketch(args) {
     ].join("\n"),
     [
       "  // Keep the ACK/unicast link on pipe 1, matching the proven simple test.",
-      "  // Pipe 0 is reserved for no-ACK show broadcasts only.",
+      "  // Broadcast lives on pipe 0. Keep EN_AA enabled on pipe 0 because RF24 ACK-payload",
+      "  // support depends on pipe 0 AutoAck being enabled. MASTER broadcasts already use",
+      "  // per-packet NO_ACK, so broadcast packets still do not request acknowledgements.",
       "  radio.openReadingPipe(0, BROADCAST_ADDRESS);",
       "  radio.openReadingPipe(1, UNIQUE_ADDRESS);",
-      "  radio.setAutoAck(0, false);",
+      "  radio.setAutoAck(0, true);",
       "  radio.setAutoAck(1, true);",
     ].join("\n")
   );
