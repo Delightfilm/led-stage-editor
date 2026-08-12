@@ -1,7 +1,5 @@
-import {
-  buildNrf24MasterSketch,
-  buildNrf24ReceiverSketch as buildCompressedReceiverSketch,
-} from "./nrf24CompressedCodegen.js";
+import { buildNrf24MasterSketch } from "./nrf24UnicastMasterCodegen.js";
+import { buildNrf24ReceiverSketch as buildCompressedReceiverSketch } from "./nrf24CompressedCodegen.js";
 
 export { buildNrf24MasterSketch };
 
@@ -27,13 +25,56 @@ export function buildNrf24ReceiverSketch(args) {
     ].join("\n"),
     [
       "  // Keep the ACK/unicast link on pipe 1, matching the proven simple test.",
-      "  // Broadcast lives on pipe 0. Keep EN_AA enabled on pipe 0 because RF24 ACK-payload",
-      "  // support depends on pipe 0 AutoAck being enabled. MASTER broadcasts already use",
-      "  // per-packet NO_ACK, so broadcast packets still do not request acknowledgements.",
+      "  // Broadcast remains available on pipe 0 as a compatibility fallback.",
+      "  // Performance commands from the current MASTER use the unique pipe 1 address.",
       "  radio.openReadingPipe(0, BROADCAST_ADDRESS);",
       "  radio.openReadingPipe(1, UNIQUE_ADDRESS);",
       "  radio.setAutoAck(0, true);",
       "  radio.setAutoAck(1, true);",
+    ].join("\n")
+  );
+
+  code = code.replace(
+    [
+      "    if (p.type == CMD_STOP) {",
+      "      syncClock(p.masterTimeMs);",
+      "      activeCueSeq = p.seq;",
+      "      stopPlayback();",
+      "      continue;",
+      "    }",
+    ].join("\n"),
+    [
+      "    if (p.type == CMD_STOP) {",
+      "      syncClock(p.masterTimeMs);",
+      "      activeCueSeq = p.seq;",
+      "      stopPlayback();",
+      "      // STOP is sent with AutoAck on the unique pipe; refill status for the next ACK.",
+      "      loadStatusAck();",
+      "      continue;",
+      "    }",
+    ].join("\n")
+  );
+
+  code = code.replace(
+    [
+      "    if (p.type == CMD_START) {",
+      "      syncClock(p.masterTimeMs);",
+      "      if (!playing || p.seq != activeCueSeq || p.showStartMasterMs != playbackStartMasterMs) {",
+      "        armOrRejoin(p.seq, p.showStartMasterMs);",
+      "      }",
+      "      continue;",
+      "    }",
+    ].join("\n"),
+    [
+      "    if (p.type == CMD_START) {",
+      "      syncClock(p.masterTimeMs);",
+      "      if (!playing || p.seq != activeCueSeq || p.showStartMasterMs != playbackStartMasterMs) {",
+      "        armOrRejoin(p.seq, p.showStartMasterMs);",
+      "      }",
+      "      // START is sent with AutoAck on the unique pipe; refill status for the next ACK.",
+      "      loadStatusAck();",
+      "      continue;",
+      "    }",
     ].join("\n")
   );
 
