@@ -6,6 +6,7 @@ import { defaultRelayPinPlugin } from './scripts/defaultRelayPinPlugin.js'
 import { premiereVideoEditorPrePlugin } from './scripts/premiereVideoEditorPrePlugin.js'
 import { premiereTimelinePolishPlugin } from './scripts/premiereTimelinePolishPlugin.js'
 import { premiereTimelineProPlugin } from './scripts/premiereTimelineProPlugin.js'
+import { premiereShiftSnapFixPlugin } from './scripts/premiereShiftSnapFixPlugin.js'
 import { cloudMediaStoragePlugin } from './scripts/cloudMediaStoragePlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
@@ -18,6 +19,7 @@ export default defineConfig({
     premiereVideoEditorPrePlugin(),
     premiereTimelinePolishPlugin(),
     premiereTimelineProPlugin(),
+    premiereShiftSnapFixPlugin(),
     cloudMediaStoragePlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
