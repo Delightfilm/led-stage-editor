@@ -12,6 +12,16 @@ export function buildNrf24ReceiverSketch(args) {
   );
 
   code = code.replace(
+    " * Relay outputs are ACTIVE LOW by default.",
+    " * Relay outputs are ACTIVE HIGH by default."
+  );
+
+  code = code.replace(
+    "#define RELAY_ACTIVE_LOW 1",
+    "#define RELAY_ACTIVE_LOW 0"
+  );
+
+  code = code.replace(
     "radio.writeAckPayload(0, &statusPayload, sizeof(statusPayload));",
     "radio.writeAckPayload(1, &statusPayload, sizeof(statusPayload));"
   );
