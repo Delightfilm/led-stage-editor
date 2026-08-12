@@ -17,6 +17,9 @@ import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuard
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __BUILD_COMMIT__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA || 'local'),
+  },
   plugins: [
     defaultRelayPinPlugin(),
     disableTutorialPlugin(),
