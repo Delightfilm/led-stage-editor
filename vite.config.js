@@ -9,6 +9,7 @@ import { premiereTimelineProPlugin } from './scripts/premiereTimelineProPlugin.j
 import { premiereShiftSnapFixPlugin } from './scripts/premiereShiftSnapFixPlugin.js'
 import { premiereTimelineViewportPlugin } from './scripts/premiereTimelineViewportPlugin.js'
 import { cloudMediaStoragePlugin } from './scripts/cloudMediaStoragePlugin.js'
+import { premiereEditingWorkflowPlugin } from './scripts/premiereEditingWorkflowPlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
 // https://vite.dev/config/
@@ -23,6 +24,7 @@ export default defineConfig({
     premiereShiftSnapFixPlugin(),
     premiereTimelineViewportPlugin(),
     cloudMediaStoragePlugin(),
+    premiereEditingWorkflowPlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
   ],
