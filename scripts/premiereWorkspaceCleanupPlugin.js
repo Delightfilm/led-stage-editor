@@ -74,6 +74,7 @@ export function premiereWorkspaceCleanupPlugin() {
         '          <summary title="메뉴">☰</summary>',
         '          <div className="utilityDropdown">',
         '            <div className="utilityMenuTitle">💡 LED 타임라인</div>',
+        '            <div className="utilityBuild">build {String(__BUILD_COMMIT__).slice(0, 7)}</div>',
         '            <div className="utilityActions">',
         utilityInner.split('\n').map((line) => '              ' + line.trimStart()).join('\n'),
         '            </div>',
@@ -108,7 +109,8 @@ export function premiereWorkspaceCleanupPlugin() {
         '  padding: 10px; border: 1px solid #303A54; border-radius: 10px;',
         '  background: rgba(18,22,33,.98); box-shadow: 0 16px 44px rgba(0,0,0,.58);',
         '}',
-        '.utilityMenuTitle { font-size: 12px; font-weight: 800; margin: 1px 2px 9px; color: #FFFFFF; }',
+        '.utilityMenuTitle { font-size: 12px; font-weight: 800; margin: 1px 2px 2px; color: #FFFFFF; }',
+        '.utilityBuild { font-size: 9.5px; color: #7F8AA4; margin: 0 2px 8px; font-family: monospace; }',
         '.utilityActions { display: grid; gap: 6px; }',
         '.utilityActions .tbtn { width: 100%; text-align: left; justify-content: flex-start; padding: 7px 9px; }',
         '.utilityActions .tip { position: relative; }',
@@ -155,7 +157,7 @@ export function premiereWorkspaceCleanupPlugin() {
       ].join('\n')
       replaceStrict(cssAnchor, css + cssAnchor, 'workspace css')
 
-      if (!out.includes('10000);') || !out.includes('className="utilityMenu"') || !out.includes('className="topCostumeStrip"')) {
+      if (!out.includes('10000);') || !out.includes('className="utilityMenu"') || !out.includes('className="topCostumeStrip"') || !out.includes('__BUILD_COMMIT__')) {
         throw new Error('workspace cleanup: build assertions failed')
       }
 
