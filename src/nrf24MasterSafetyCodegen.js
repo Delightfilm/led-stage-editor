@@ -1,5 +1,5 @@
-export function buildNrf24MasterSketch({ receiverCount = 8, showDurationMs = 180000, receiverHashes = [] } = {}) {
-  const count = Math.max(1, Math.min(8, Number(receiverCount) || 8));
+export function buildNrf24MasterSketch({ receiverCount = 7, showDurationMs = 180000, receiverHashes = [] } = {}) {
+  const count = Math.max(1, Math.min(8, Number(receiverCount) || 7));
   const duration = Math.max(0, Math.round(Number(showDurationMs) || 0));
   const hashes = Array.from({ length: 8 }, (_, i) => Number(receiverHashes?.[i] || 0) >>> 0);
   const hashRows = hashes
@@ -10,7 +10,8 @@ export function buildNrf24MasterSketch({ receiverCount = 8, showDurationMs = 180
  * UNO + nRF24L01+PA+LNA + I2C 1602 LCD
  * nRF24: CE D9 / CSN D10 / MOSI D11 / MISO D12 / SCK D13
  * LCD: SDA A4 / SCL A5 / 5V / GND
- * ENABLE rocker: D2-GND, START rocker: D3-GND
+ * ENABLE rocker: D2-GND (LOW=ON, OPEN=OFF), START rocker: D3-GND
+ * Default receiver count: 7 costumes.
  * LINK scan: about 0.5 s / receiver, FAIL after about 1.0 s without ACK.
  * PRE-FLIGHT: O=ready, X=link fail, V=timeline version mismatch, ?=version unknown.
  * OVERRIDE: if PRE-FLIGHT is not ready, first START arms override; OFF->ON again within 5 s forces start.
@@ -200,12 +201,12 @@ void drawLcd() {
   }
 
   lcd.setCursor(0, 0);
-  printPadded("12345678 READY");
-  lcd.setCursor(0, 1);
+  if (lastEnable) printPadded("MASTER ON  7RX");
+  else printPadded("MASTER OFF 7RX");
 
-  for (byte i = 0; i < 8; i++) {
-    if (i >= RECEIVER_COUNT) lcd.print('-');
-    else if (!linkOk[i]) lcd.print('X');
+  lcd.setCursor(0, 1);
+  for (byte i = 0; i < RECEIVER_COUNT; i++) {
+    if (!linkOk[i]) lcd.print('X');
     else if (!versionKnown[i]) lcd.print('?');
     else if (!versionOk[i]) lcd.print('V');
     else lcd.print('O');
@@ -214,9 +215,9 @@ void drawLcd() {
   lcd.print(readyCount());
   lcd.print('/');
   lcd.print(RECEIVER_COUNT);
-  if (showPlaying) lcd.print('P');
-  else lcd.print(' ');
-  lcd.print(' ');
+  if (showPlaying) lcd.print(" P");
+  else lcd.print("  ");
+  lcd.print("   ");
 }
 
 void requestStart() {
@@ -261,6 +262,10 @@ void setup() {
 
   lastEnable = digitalRead(ENABLE_PIN) == LOW;
   lastStart = digitalRead(START_PIN) == LOW;
+
+  if (lastEnable) sendShowState();
+  else sendStop();
+
   delay(300);
   lcd.clear();
   drawLcd();
@@ -304,7 +309,15 @@ void loop() {
     const bool v = digitalRead(ENABLE_PIN) == LOW;
     if (v != lastEnable) {
       lastEnable = v;
-      if (!v) sendStop();
+      if (v) {
+        showPlaying = false;
+        showStartMasterMs = 0;
+        overrideArmed = false;
+        sendShowState();
+      } else {
+        sendStop();
+      }
+      drawLcd();
     }
   }
 
