@@ -13,7 +13,7 @@ export function nrf24CompressedLiveCodePlugin() {
       const transformed = typeof result === 'string' ? result : result.code
       const patched = transformed.replace(
         './nrf24Codegen.js',
-        './nrf24CompressedCodegen.js'
+        './nrf24Pipe1Codegen.js'
       )
 
       if (typeof result === 'string') return patched
