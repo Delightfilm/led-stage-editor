@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { cloudVersionHistoryPlugin } from './scripts/cloudVersionHistoryPlugin.js'
+import { cloudAudioStoragePlugin } from './scripts/cloudAudioStoragePlugin.js'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [cloudVersionHistoryPlugin(), react()],
+  plugins: [cloudAudioStoragePlugin(), react()],
 })
