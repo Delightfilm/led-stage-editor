@@ -14,6 +14,8 @@ import { premiereProgramAspectFixPlugin } from './scripts/premiereProgramAspectF
 import { premiereSingleTrackOverwritePlugin } from './scripts/premiereSingleTrackOverwritePlugin.js'
 import { premiereWorkspaceCleanupPlugin } from './scripts/premiereWorkspaceCleanupPlugin.js'
 import { choreographyFormationPlugin } from './scripts/choreographyFormationPlugin.js'
+import { formationMemorySidebarPlugin } from './scripts/formationMemorySidebarPlugin.js'
+import { formationWidthResizePlugin } from './scripts/formationWidthResizePlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 
 // https://vite.dev/config/
@@ -33,6 +35,8 @@ export default defineConfig({
     premiereSingleTrackOverwritePlugin(),
     premiereWorkspaceCleanupPlugin(),
     choreographyFormationPlugin(),
+    formationMemorySidebarPlugin(),
+    formationWidthResizePlugin(),
     premiereVideoBuildGuardPlugin(),
     react(),
   ],
