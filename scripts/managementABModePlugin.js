@@ -1,0 +1,70 @@
+export function managementABModePlugin() {
+  return {
+    name: 'management-ab-mode-controls',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!id.includes('src/App.jsx')) return null
+      let out = code
+
+      const stateAnchor = "  const [toast, setToast] = useState(null)"
+      if (!out.includes("const [stageMode, setStageMode]")) {
+        if (!out.includes(stateAnchor)) throw new Error('A/B mode: state anchor not found')
+        out = out.replace(stateAnchor, stateAnchor + "\n  const [stageMode, setStageMode] = useState('A')")
+      }
+
+      const helperAnchor = "  const showToast = (message) => {"
+      if (!out.includes('const selectModeA = async')) {
+        if (!out.includes(helperAnchor)) throw new Error('A/B mode: helper anchor not found')
+        const helpers = [
+          "  const previewSafe = firmwareBundle.previewSafeLimitMs > 0 && Math.round(currentTime * 1000) < firmwareBundle.previewSafeLimitMs",
+          "",
+          "  const selectModeA = async () => {",
+          "    if (!masterProtocolReady) { showToast('MASTER A/B 펌웨어 연결 후 사용할 수 있어요.'); return }",
+          "    await sendSerialLine('MODE_A')",
+          "    setStageMode('A')",
+          "    showToast('A 독립 모드: D2 START는 타임라인 0초부터 시작합니다.')",
+          "  }",
+          "",
+          "  const armModeB = async () => {",
+          "    if (!masterProtocolReady) { showToast('MASTER A/B 펌웨어 연결 후 사용할 수 있어요.'); return }",
+          "    const offsetMs = Math.round(currentTime * 1000)",
+          "    if (!firmwareBundle.previewSafeLimitMs || offsetMs >= firmwareBundle.previewSafeLimitMs) {",
+          "      showToast('B ARM은 첫 실제 LED ON 이전 구간에서만 가능합니다.')",
+          "      return",
+          "    }",
+          "    await sendSerialLine(`SET_DELAY ${delayEnabled ? delayMs : 0}`)",
+          "    await sendSerialLine(`ARM_B ${offsetMs}`)",
+          "    setStageMode('B_ARMED')",
+          "    showToast(`B ARM: ${fmtTime(currentTime)} 위치 · 이제 D2로 LIVE START`)",
+          "  }",
+          "",
+        ].join('\n')
+        out = out.replace(helperAnchor, helpers + helperAnchor)
+      }
+
+      out = out.replace(
+        "/ACK|DELAY_OK|SEEK_OK/i.test(line)",
+        "/ACK|DELAY_OK|SEEK_OK|ARM_OK|MODE_A_READY|PREVIEW_.*_OK|LIVE_STARTED/i.test(line)"
+      )
+
+      const timelineAnchor = "        <div className=\"timelineScroll\" ref={timelineScrollRef}>"
+      if (!out.includes('B ARM · D2 START')) {
+        if (!out.includes(timelineAnchor)) throw new Error('A/B mode: timeline anchor not found')
+        const bar = [
+          "        <section style={{ flex: '0 0 34px', display: 'flex', alignItems: 'center', gap: 7, padding: '0 12px', borderBottom: '1px solid #242a32', background: '#101318', color: '#8d98a8', fontSize: 9 }}>",
+          "          <b style={{ color: stageMode === 'A' ? '#62e7a2' : '#ffd84a' }}>{stageMode === 'A' ? 'A · STANDALONE' : 'B · ARMED'}</b>",
+          "          <button className=\"tbtn compact\" disabled={!masterProtocolReady} onClick={selectModeA}>A 독립 · 0초</button>",
+          "          <button className=\"tbtn compact\" disabled={!masterProtocolReady || !previewSafe} onClick={armModeB}>B ARM · D2 START @ {fmtTime(currentTime)}</button>",
+          "          <span>안전 PREVIEW 0 ~ {(firmwareBundle.previewSafeLimitMs / 1000).toFixed(3)}s</span>",
+          "          <span style={{ marginLeft: 'auto', color: '#687385' }}>LIVE 후 RX 저장 프리셋 독립 재생</span>",
+          "        </section>",
+          "",
+          timelineAnchor,
+        ].join('\n')
+        out = out.replace(timelineAnchor, bar)
+      }
+
+      return { code: out, map: null }
+    },
+  }
+}
