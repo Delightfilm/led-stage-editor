@@ -6,6 +6,106 @@ import {
 const RELAY_SAFE_HZ = 6;
 const STEP_MS = 10;
 
+const injectRequired = (code, from, to, label) => {
+  if (!code.includes(from)) throw new Error(`management telemetry: ${label} anchor not found`);
+  return code.replace(from, to);
+};
+
+const addLiveTelemetryToMasterSketch = (source) => {
+  let code = source;
+
+  code = injectRequired(
+    code,
+    "#define SERIAL_BAUD 115200",
+    "#define SERIAL_BAUD 115200\n#define TELEMETRY_INTERVAL_MS 500UL",
+    "serial define"
+  );
+
+  code = injectRequired(
+    code,
+    "uint32_t lastLinkOkMs[8] = {0};\nbyte scanIndex = 0;",
+    [
+      "uint32_t lastLinkOkMs[8] = {0};",
+      "uint32_t lastPingRttUs[8] = {0};",
+      "uint32_t lastPingSampleMs[8] = {0};",
+      "uint32_t lastTelemetryMs = 0;",
+      "byte scanIndex = 0;",
+    ].join("\n"),
+    "telemetry state"
+  );
+
+  code = injectRequired(
+    code,
+    [
+      "  RadioPacket p = makePacket(CMD_PING, i + 1);",
+      "  const bool ok = radio.write(&p, sizeof(p));",
+      "  const uint32_t now = millis();",
+    ].join("\n"),
+    [
+      "  RadioPacket p = makePacket(CMD_PING, i + 1);",
+      "  const uint32_t pingStartedUs = micros();",
+      "  const bool ok = radio.write(&p, sizeof(p));",
+      "  const uint32_t pingRttUs = micros() - pingStartedUs;",
+      "  const uint32_t now = millis();",
+      "  lastPingSampleMs[i] = now;",
+      "  lastPingRttUs[i] = ok ? pingRttUs : 0;",
+    ].join("\n"),
+    "ping timing"
+  );
+
+  const serialAnchor = "uint32_t parseSerialUInt(const char* p) {";
+  code = injectRequired(
+    code,
+    serialAnchor,
+    [
+      "char receiverStateChar(byte i) {",
+      "  if (!linkOk[i]) return 'X';",
+      "  if (!versionKnown[i]) return '?';",
+      "  if (!versionOk[i]) return 'V';",
+      "  return 'O';",
+      "}",
+      "",
+      "void printRxMonitorSerial() {",
+      "  const uint32_t now = millis();",
+      "  Serial.print(\"RXMON \" );",
+      "  for (byte i = 0; i < RECEIVER_COUNT; i++) {",
+      "    if (i) Serial.print(',');",
+      "    Serial.print(i + 1);",
+      "    Serial.print(':');",
+      "    Serial.print(receiverStateChar(i));",
+      "    Serial.print(':');",
+      "    Serial.print(lastPingRttUs[i]);",
+      "    Serial.print(':');",
+      "    const uint32_t age = lastPingSampleMs[i] ? (now - lastPingSampleMs[i]) : 0xFFFFFFFFUL;",
+      "    Serial.print(age);",
+      "  }",
+      "  Serial.println();",
+      "}",
+      "",
+      serialAnchor,
+    ].join("\n"),
+    "serial monitor functions"
+  );
+
+  code = injectRequired(
+    code,
+    "void loop() {\n  pollSerial();\n  const uint32_t now = millis();",
+    [
+      "void loop() {",
+      "  pollSerial();",
+      "  const uint32_t now = millis();",
+      "",
+      "  if (pcHandshake && now - lastTelemetryMs >= TELEMETRY_INTERVAL_MS) {",
+      "    lastTelemetryMs = now;",
+      "    printRxMonitorSerial();",
+      "  }",
+    ].join("\n"),
+    "telemetry loop"
+  );
+
+  return code;
+};
+
 const effectOnAt = (block, t) => {
   const local = t - Number(block.start || 0);
   const dur = Math.max(0, Number(block.dur) || 0);
@@ -132,12 +232,13 @@ export function buildManagementFirmwareBundle({ costumes = [], blocks = [] } = {
   const previewSafeLimitMs = firstOns.length ? Math.min(...firstOns) : Math.max(1, showDurationMs);
   const receiverCount = Math.max(1, receivers.length || 1);
 
-  const masterCode = buildNrf24ManagementMasterSketch({
+  let masterCode = buildNrf24ManagementMasterSketch({
     receiverCount,
     showDurationMs,
     receiverHashes,
     previewSafeLimitMs,
   });
+  masterCode = addLiveTelemetryToMasterSketch(masterCode);
 
   const receiverItems = receivers.map((rx, index) => ({
     ...rx,
