@@ -50,6 +50,7 @@ export default defineConfig({
     premiereEditingWorkflowPlugin(),
     premiereProgramAspectFixPlugin(),
     premiereSingleTrackOverwritePlugin(),
+    managementMenuPlugin(),
     premiereWorkspaceCleanupPlugin(),
     choreographyFormationPlugin(),
     formationMemorySidebarPlugin(),
@@ -62,7 +63,6 @@ export default defineConfig({
     scopeManagementPlugin(managementABModePlugin()),
     scopeManagementPlugin(liveMonitorPlugin()),
     scopeManagementPlugin(managementSerialSafetyPlugin()),
-    managementMenuPlugin(),
     react(),
   ],
 })
