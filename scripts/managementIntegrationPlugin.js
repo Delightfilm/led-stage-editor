@@ -6,7 +6,10 @@ export function managementIntegrationPlugin() {
       let out = code
 
       if (id.includes('src/ManagementApp.jsx')) {
-        out = out.replace("import './App.css'", "import './ManagementApp.css'")
+        out = out.replace(
+          "import './App.css'",
+          "import './index.css'\nimport './ManagementApp.css'",
+        )
 
         const rootAnchor = '  return (\n    <div className="app">'
         if (!out.includes(rootAnchor)) throw new Error('management integration: app root anchor not found')
