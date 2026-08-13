@@ -19,9 +19,23 @@ import { formationWidthResizePlugin } from './scripts/formationWidthResizePlugin
 import { fineBlockTimingPlugin } from './scripts/fineBlockTimingPlugin.js'
 import { defaultTimelineOpenPlugin } from './scripts/defaultTimelineOpenPlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
+import { managementIntegrationPlugin } from './scripts/managementIntegrationPlugin.js'
+import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
+import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
+import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
+import { managementABModePlugin } from './scripts/managementABModePlugin.js'
+import { liveMonitorPlugin } from './scripts/liveMonitorPlugin.js'
 
-// https://vite.dev/config/
-// production deployment trigger: timeline tracks open by default
+const scopeManagementPlugin = (plugin) => ({
+  ...plugin,
+  name: `${plugin.name}-management-workspace`,
+  transform(code, id, ...rest) {
+    if (!id.includes('src/ManagementApp.jsx')) return null
+    const fakeId = id.replace('src/ManagementApp.jsx', 'src/App.jsx')
+    return plugin.transform.call(this, code, fakeId, ...rest)
+  },
+})
+
 export default defineConfig({
   plugins: [
     defaultRelayPinPlugin(),
@@ -43,6 +57,12 @@ export default defineConfig({
     fineBlockTimingPlugin(),
     defaultTimelineOpenPlugin(),
     premiereVideoBuildGuardPlugin(),
+    managementIntegrationPlugin(),
+    scopeManagementPlugin(managementFirmwarePanelPlugin()),
+    scopeManagementPlugin(managementABModePlugin()),
+    scopeManagementPlugin(liveMonitorPlugin()),
+    scopeManagementPlugin(managementSerialSafetyPlugin()),
+    managementMenuPlugin(),
     react(),
   ],
 })
