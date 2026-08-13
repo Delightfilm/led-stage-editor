@@ -47,7 +47,7 @@ export function managementABModePlugin() {
         "/ACK|DELAY_OK|SEEK_OK|ARM_OK|MODE_A_READY|PREVIEW_.*_OK|LIVE_STARTED/i.test(line)"
       )
 
-      const timelineAnchor = "        <div className=\"timelineScroll\" ref={timelineScrollRef}>"
+      const timelineAnchor = "        <div className=\"timelineScroll\" ref={timelineScrollRef} onDragStart={(e) => e.preventDefault()}>"
       if (!out.includes('B ARM · D2 START')) {
         if (!out.includes(timelineAnchor)) throw new Error('A/B mode: timeline anchor not found')
         const bar = [
