@@ -4,7 +4,7 @@ export { buildNrf24MasterSketch };
 
 const clean = (v) => String(v ?? "").replace(/[\r\n]+/g, " ").replace(/\*\//g, "* /");
 const rxAddr = (id) => `EL${String(id).padStart(3, "0")}`;
-const EVENT_TICK_MS = 20;
+const EVENT_TICK_MS = 10;
 const COMPACT16_MAX_TICK = 0x7fff;
 
 export function buildNrf24ReceiverSketch({ receiverId, costumeName, parts = [], showHash = 0 }) {
