@@ -5,5 +5,7 @@ import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanel
 import { managementABModePlugin } from './scripts/managementABModePlugin.js'
 
 export default defineConfig({
-  plugins: [managementABModePlugin(), managementFirmwarePanelPlugin(), managementSerialSafetyPlugin(), react()],
+  // Firmware bundle must be injected before the A/B mode helpers because
+  // the A/B controls read firmwareBundle during render.
+  plugins: [managementFirmwarePanelPlugin(), managementABModePlugin(), managementSerialSafetyPlugin(), react()],
 })
