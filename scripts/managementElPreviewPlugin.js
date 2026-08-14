@@ -98,8 +98,8 @@ const managementZoneFill = (zoneColors, zone, glowId) => {
   const value = zoneColors[zone] || zoneColors.all
   if (!value || value.a <= 0.02) return { fill: '#252b3a', opacity: 1 }
   return {
-    fill: `rgb(${value.r},${value.g},${value.b})`,
-    filter: `url(#${glowId})`,
+    fill: 'rgb(' + value.r + ',' + value.g + ',' + value.b + ')',
+    filter: 'url(#' + glowId + ')',
     opacity: 1,
   }
 }
@@ -143,13 +143,13 @@ function ManagementElAvatarPreview({ zoneColors, glowId }) {
             {costumes.map((costume, index) => {
               const preview = managementPreviewState(costume, blocks, currentTime)
               const activeLabel = preview.activeBlocks.length
-                ? preview.activeBlocks.map(({ part, block }) => `${part.name || 'EL'}:${block.type || 'solid'}`).join(' · ')
+                ? preview.activeBlocks.map(({ part, block }) => (part.name || 'EL') + ':' + (block.type || 'solid')).join(' · ')
                 : '대기'
               return (
-                <div key={costume.id || index} style={{ minHeight: 145, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 8px', borderRadius: 7, border: `1px solid ${preview.on ? '#3a8f69' : '#252b35'}`, background: preview.on ? '#10251d' : '#11151b', boxShadow: preview.on ? 'inset 0 0 18px rgba(98,231,162,.09)' : 'none' }}>
-                  <ManagementElAvatarPreview zoneColors={preview.zones} glowId={`mgmt-el-glow-${index}`} />
+                <div key={costume.id || index} style={{ minHeight: 145, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 8px', borderRadius: 7, border: preview.on ? '1px solid #3a8f69' : '1px solid #252b35', background: preview.on ? '#10251d' : '#11151b', boxShadow: preview.on ? 'inset 0 0 18px rgba(98,231,162,.09)' : 'none' }}>
+                  <ManagementElAvatarPreview zoneColors={preview.zones} glowId={'mgmt-el-glow-' + index} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: '#dce6f3', fontSize: 11, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{costume.name || `RX ${index + 1}`}</div>
+                    <div style={{ color: '#dce6f3', fontSize: 11, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{costume.name || ('RX ' + (index + 1))}</div>
                     <div style={{ marginTop: 5, color: preview.on ? '#62e7a2' : '#687385', fontSize: 11, fontWeight: 800 }}>{preview.on ? 'EL ON' : 'EL OFF'}</div>
                     <div style={{ marginTop: 4, color: '#788496', fontSize: 8, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{activeLabel}</div>
                   </div>
