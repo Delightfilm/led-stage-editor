@@ -7,7 +7,7 @@ export function liveMonitorPlugin() {
       let out = code
 
       const state = "  const [masterLog, setMasterLog] = useState([])"
-      if (!out.includes('const [rxMon, setRxMon]')) out = out.replace(state, state + "\n  const [pingAlive, setPingAlive] = useState(false)\n  const [pingRtt, setPingRtt] = useState(null)\n  const [rxTelemetrySeen, setRxTelemetrySeen] = useState(false)\n  const [rxMon, setRxMon] = useState(() => Array.from({ length: 7 }, (_, i) => ({ id: i + 1, state: 'X', us: 0, age: null })))")
+      if (!out.includes('const [rxMon, setRxMon]')) out = out.replace(state, state + "\n  const [pingAlive, setPingAlive] = useState(false)\n  const [pingRtt, setPingRtt] = useState(null)\n  const [rxTelemetrySeen, setRxTelemetrySeen] = useState(false)\n  const [rxMon, setRxMon] = useState(() => Array.from({ length: 7 }, (_, i) => ({ id: i + 1, state: 'X', us: 0, age: null, retry: 0 })))")
 
       const refs = "  const lastSerialSeekAtRef = useRef(0)"
       if (!out.includes('const pingSentRef')) out = out.replace(refs, refs + "\n  const pingSentRef = useRef(0)\n  const pongRef = useRef(0)")
@@ -16,7 +16,7 @@ export function liveMonitorPlugin() {
       if (!out.includes("line.startsWith('RXMON ')")) out = out.replace(parser, [
         "    if (!line) return",
         "    if (line.startsWith('RXMON ')) {",
-        "      const rows = line.slice(6).split(',').map((v) => { const [id, state, us, age] = v.split(':'); return { id: Number(id), state, us: Number(us) || 0, age: Number(age) } })",
+        "      const rows = line.slice(6).split(',').map((v) => { const [id, state, us, age, retry] = v.split(':'); return { id: Number(id), state, us: Number(us) || 0, age: Number(age), retry: Number(retry) || 0 } })",
         "      if (rows.length) { setRxMon(rows); setRxTelemetrySeen(true) }",
         "      return",
         "    }",
@@ -50,7 +50,7 @@ export function liveMonitorPlugin() {
           "              <span className=\"rxUsbRtt\">{pingRtt==null?'RTT --':`${pingRtt.toFixed(1)} ms`}</span>",
           "            </div>",
           "            <div className=\"rxLiveRows\">",
-          "              {rxMon.slice(0,7).map((rx)=>{ const telemetryReady=masterConnected&&rxTelemetrySeen; const s=telemetryReady?rx.state:'W'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':s==='W'?'#8c98aa':'#ff657a'; return <div key={rx.id} className=\"rxLiveRow\"><b>RX{rx.id}</b><span className=\"rxLiveState\" style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':s==='W'?'WAIT':'OFFLINE'}</span><span className=\"rxLiveMs\">{telemetryReady&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</span></div> })}",
+          "              {rxMon.slice(0,7).map((rx)=>{ const telemetryReady=masterConnected&&rxTelemetrySeen; const s=telemetryReady?rx.state:'W'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':s==='W'?'#8c98aa':'#ff657a'; return <div key={rx.id} className=\"rxLiveRow\"><b>RX{rx.id}</b><span className=\"rxLiveState\" style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':s==='W'?'WAIT':'OFFLINE'}</span><span className=\"rxLiveMs\">{telemetryReady&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</span><span className=\"rxLiveRetry\">{telemetryReady?`R${rx.retry}`:'R-'}</span></div> })}",
           "            </div>",
           "          </aside>",
           "          <div className=\"stageControlStack\">",
