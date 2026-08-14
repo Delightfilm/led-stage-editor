@@ -29,6 +29,7 @@ import { liveMonitorPlugin } from './scripts/liveMonitorPlugin.js'
 import { managementElPreviewPlugin } from './scripts/managementElPreviewPlugin.js'
 import { managementLiveCueFixPlugin } from './scripts/managementLiveCueFixPlugin.js'
 import { managementOneClickLivePlugin } from './scripts/managementOneClickLivePlugin.js'
+import { managementSerialRecoveryPlugin } from './scripts/managementSerialRecoveryPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -71,6 +72,7 @@ export default defineConfig({
     scopeManagementPlugin(managementSerialSafetyPlugin()),
     managementLiveCueFixPlugin(),
     managementOneClickLivePlugin(),
+    managementSerialRecoveryPlugin(),
     react(),
   ],
 })
