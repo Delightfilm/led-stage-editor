@@ -23,6 +23,7 @@ import { managementIntegrationPlugin } from './scripts/managementIntegrationPlug
 import { managementSequenceDataPlugin } from './scripts/managementSequenceDataPlugin.js'
 import { accountTransferPlugin } from './scripts/accountTransferPlugin.js'
 import { premiereSequenceManagerCompatPlugin } from './scripts/premiereSequenceManagerCompatPlugin.js'
+import { projectLinkedMediaUxPlugin } from './scripts/projectLinkedMediaUxPlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
@@ -75,6 +76,7 @@ export default defineConfig({
     managementSequenceDataPlugin(),
     accountTransferPlugin(),
     premiereSequenceManagerCompatPlugin(),
+    projectLinkedMediaUxPlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
     managementFormationStagePlugin(),
