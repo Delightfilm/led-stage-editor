@@ -26,6 +26,7 @@ import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPl
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
 import { managementABModePlugin } from './scripts/managementABModePlugin.js'
 import { liveMonitorPlugin } from './scripts/liveMonitorPlugin.js'
+import { managementLiveCueFixPlugin } from './scripts/managementLiveCueFixPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -65,6 +66,7 @@ export default defineConfig({
     scopeManagementPlugin(managementABModePlugin()),
     scopeManagementPlugin(liveMonitorPlugin()),
     scopeManagementPlugin(managementSerialSafetyPlugin()),
+    managementLiveCueFixPlugin(),
     react(),
   ],
 })
