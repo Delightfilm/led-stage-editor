@@ -31,7 +31,8 @@ import { managementLiveCueFixPlugin } from './scripts/managementLiveCueFixPlugin
 import { managementOneClickLivePlugin } from './scripts/managementOneClickLivePlugin.js'
 import { managementSerialRecoveryPlugin } from './scripts/managementSerialRecoveryPlugin.js'
 import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetryHeartbeatPlugin.js'
-import { managementRehearsalModePlugin } from './scripts/managementRehearsalModePlugin.js'
+import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
+import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -76,7 +77,8 @@ export default defineConfig({
     managementOneClickLivePlugin(),
     managementSerialRecoveryPlugin(),
     managementTelemetryHeartbeatPlugin(),
-    managementRehearsalModePlugin(),
+    managementRehearsalUiPlugin(),
+    managementFirmwareHardenPlugin(),
     react(),
   ],
 })
