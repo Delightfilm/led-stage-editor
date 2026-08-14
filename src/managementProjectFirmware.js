@@ -28,6 +28,7 @@ const addLiveTelemetryToMasterSketch = (source) => {
       "uint32_t lastLinkOkMs[8] = {0};",
       "uint32_t lastPingRttUs[8] = {0};",
       "uint32_t lastPingSampleMs[8] = {0};",
+      "byte lastPingRetryCount[8] = {0};",
       "uint32_t lastTelemetryMs = 0;",
       "byte scanIndex = 0;",
     ].join("\n"),
@@ -46,9 +47,11 @@ const addLiveTelemetryToMasterSketch = (source) => {
       "  const uint32_t pingStartedUs = micros();",
       "  const bool ok = radio.write(&p, sizeof(p));",
       "  const uint32_t pingRttUs = micros() - pingStartedUs;",
+      "  const byte pingRetryCount = radio.getARC();",
       "  const uint32_t now = millis();",
       "  lastPingSampleMs[i] = now;",
       "  lastPingRttUs[i] = ok ? pingRttUs : 0;",
+      "  lastPingRetryCount[i] = pingRetryCount;",
     ].join("\n"),
     "ping timing"
   );
@@ -78,6 +81,8 @@ const addLiveTelemetryToMasterSketch = (source) => {
       "    Serial.print(':');",
       "    const uint32_t age = lastPingSampleMs[i] ? (now - lastPingSampleMs[i]) : 0xFFFFFFFFUL;",
       "    Serial.print(age);",
+      "    Serial.print(':');",
+      "    Serial.print(lastPingRetryCount[i]);",
       "  }",
       "  Serial.println();",
       "}",
