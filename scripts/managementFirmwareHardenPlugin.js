@@ -6,7 +6,7 @@ export function managementFirmwareHardenPlugin() {
       if (!id.includes('src/managementProjectFirmware.js')) return null
       let out = code
 
-      const importAnchor = 'import { buildNrf24ReceiverSketch as buildProductionReceiverSketch } from "./nrf24Pipe1Codegen.js";'
+      const importAnchor = 'import {\n  buildNrf24ManagementMasterSketch,\n  buildNrf24ManagementReceiverSketch,\n} from "./nrf24ManagementCodegen.js";'
       const hardenImport = 'import { hardenStageMasterFirmware, hardenStageReceiverFirmware } from "./managementFirmwareHarden.js";'
       if (!out.includes(hardenImport)) {
         if (!out.includes(importAnchor)) throw new Error('firmware harden: import anchor not found')
