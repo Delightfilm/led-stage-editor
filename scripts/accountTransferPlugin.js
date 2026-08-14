@@ -1,6 +1,7 @@
 export function accountTransferPlugin() {
   return {
     name: 'account-transfer-json',
+    enforce: 'pre',
     transform(code, id) {
       if (!id.includes('src/App.jsx')) return null
 
