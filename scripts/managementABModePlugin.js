@@ -15,7 +15,12 @@ export function managementABModePlugin() {
       const refAnchor = "  const syntheticPlayRef = useRef({ at: 0, time: 0 })"
       if (!out.includes('const spaceResumeRef')) {
         if (!out.includes(refAnchor)) throw new Error('A/B mode: synthetic play ref anchor not found')
-        out = out.replace(refAnchor, refAnchor + "\n  const spaceResumeRef = useRef(false)")
+        out = out.replace(refAnchor, [
+          refAnchor,
+          "  const spaceResumeRef = useRef(false)",
+          "  const bArmedOffsetRef = useRef(0)",
+          "  const bStartSentRef = useRef(false)",
+        ].join('\n'))
       }
 
       const helperAnchor = "  const showToast = (message) => {"
@@ -24,7 +29,7 @@ export function managementABModePlugin() {
         const helpers = [
           "  const previewSafe = firmwareBundle.previewSafeLimitMs > 0 && Math.round(currentTime * 1000) < firmwareBundle.previewSafeLimitMs",
           "  const stageLive = stageMode === 'A_LIVE' || stageMode === 'B_LIVE'",
-          "  const stageModeLabel = stageMode === 'A_LIVE' ? 'A · LIVE' : stageMode === 'B_LIVE' ? 'B · LIVE' : stageMode === 'B_ARMED' ? 'B · ARMED' : 'A · STANDALONE'",
+          "  const stageModeLabel = stageMode === 'A_LIVE' ? 'A · LIVE' : stageMode === 'B_LIVE' ? 'B · LIVE' : stageMode === 'B_ARMED' ? 'B · ARMED · SPACE=GO' : 'A · STANDALONE'",
           "  const stageModeColor = stageLive ? '#ff657a' : stageMode === 'A' ? '#62e7a2' : '#ffd84a'",
           "",
           "  const playLocalAt = async (time, notifyMaster = true) => {",
@@ -52,11 +57,29 @@ export function managementABModePlugin() {
           "    await playLocalAt(actualInTime, true)",
           "  }",
           "",
+          "  const startArmedBFromKeyboard = async () => {",
+          "    if (stageMode !== 'B_ARMED' || bStartSentRef.current) return",
+          "    if (!masterProtocolReady) { showToast('MASTER 연결이 끊겨 B LIVE START를 보낼 수 없어요.'); return }",
+          "    bStartSentRef.current = true",
+          "    spaceResumeRef.current = false",
+          "    pause(false)",
+          "    const offsetMs = Math.max(0, Math.round(Number(bArmedOffsetRef.current) || 0))",
+          "    const sent = await sendSerialLine(`LIVE_START ${offsetMs}`)",
+          "    if (!sent) {",
+          "      bStartSentRef.current = false",
+          "      showToast('B LIVE START 전송 실패 · MASTER 연결을 확인해 주세요.')",
+          "      return",
+          "    }",
+          "    showToast(`B LIVE START 큐 전송 · ${fmtTime(offsetMs / 1000)} · MASTER 응답 대기`)",
+          "  }",
+          "",
           "  const selectModeA = async () => {",
           "    if (!masterProtocolReady) { showToast('MASTER A/B 펌웨어 연결 후 사용할 수 있어요.'); return }",
           "    if (stageLive) { showToast('LIVE 재생 중에는 모드를 바꿀 수 없어요.'); return }",
           "    await sendSerialLine('MODE_A')",
           "    setStageMode('A')",
+          "    bArmedOffsetRef.current = 0",
+          "    bStartSentRef.current = false",
           "    spaceResumeRef.current = false",
           "    showToast('A 독립 모드: D2 START는 타임라인 0초부터 시작합니다.')",
           "  }",
@@ -69,11 +92,14 @@ export function managementABModePlugin() {
           "      showToast('B ARM은 첫 실제 LED ON 이전 구간에서만 가능합니다.')",
           "      return",
           "    }",
+          "    pause()",
           "    await sendSerialLine(`SET_DELAY ${delayEnabled ? delayMs : 0}`)",
           "    await sendSerialLine(`ARM_B ${offsetMs}`)",
+          "    bArmedOffsetRef.current = offsetMs",
+          "    bStartSentRef.current = false",
           "    setStageMode('B_ARMED')",
           "    spaceResumeRef.current = false",
-          "    showToast(`B ARM: ${fmtTime(currentTime)} 위치 · 이제 D2로 LIVE START`)",
+          "    showToast(`B ARM: ${fmtTime(offsetMs / 1000)} · SPACE 또는 D2로 LIVE START`)",
           "  }",
           "",
         ].join('\n')
@@ -94,6 +120,7 @@ export function managementABModePlugin() {
           "      const offsetMs = Math.max(0, Number(event?.detail?.offsetMs) || 0)",
           "      const actualStart = clamp(offsetMs / 1000 + effectiveDelay / 1000, 0, duration)",
           "      const wasBArmed = stageMode === 'B_ARMED'",
+          "      bStartSentRef.current = false",
           "      spaceResumeRef.current = false",
           "      setStageMode(wasBArmed ? 'B_LIVE' : 'A_LIVE')",
           "      playLocalAt(actualStart, false)",
@@ -101,6 +128,8 @@ export function managementABModePlugin() {
           "    }",
           "    const onLiveFinished = () => {",
           "      pause(false)",
+          "      bArmedOffsetRef.current = 0",
+          "      bStartSentRef.current = false",
           "      spaceResumeRef.current = false",
           "      setStageMode('A')",
           "      showToast('LIVE 종료 · 웹 타임라인 정지')",
@@ -127,7 +156,10 @@ export function managementABModePlugin() {
       const newSpace = [
         "      if (event.code === 'Space') {",
         "        event.preventDefault()",
-        "        if (playing) {",
+        "        if (event.repeat) return",
+        "        if (stageMode === 'B_ARMED') {",
+        "          startArmedBFromKeyboard()",
+        "        } else if (playing) {",
         "          pause()",
         "          spaceResumeRef.current = true",
         "        } else if (spaceResumeRef.current) {",
@@ -141,15 +173,15 @@ export function managementABModePlugin() {
       if (out.includes(oldSpace)) out = out.replace(oldSpace, newSpace)
 
       const timelineAnchor = "        <div className=\"timelineScroll\" ref={timelineScrollRef} onDragStart={(e) => e.preventDefault()}>"
-      if (!out.includes('B ARM · D2 START')) {
+      if (!out.includes('B ARM · SPACE/D2 START')) {
         if (!out.includes(timelineAnchor)) throw new Error('A/B mode: timeline anchor not found')
         const bar = [
           "        <section style={{ flex: '0 0 34px', display: 'flex', alignItems: 'center', gap: 7, padding: '0 12px', borderBottom: '1px solid #242a32', background: '#101318', color: '#8d98a8', fontSize: 9 }}>",
           "          <b style={{ color: stageModeColor }}>{stageModeLabel}</b>",
           "          <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageLive} onClick={selectModeA}>A 독립 · 0초</button>",
-          "          <button className=\"tbtn compact\" disabled={!masterProtocolReady || !previewSafe || stageLive} onClick={armModeB}>B ARM · D2 START @ {fmtTime(currentTime)}</button>",
+          "          <button className=\"tbtn compact\" disabled={!masterProtocolReady || !previewSafe || stageLive} onClick={armModeB}>B ARM · SPACE/D2 START @ {fmtTime(currentTime)}</button>",
           "          <span>안전 PREVIEW 0 ~ {(firmwareBundle.previewSafeLimitMs / 1000).toFixed(3)}s</span>",
-          "          <span style={{ marginLeft: 'auto', color: '#687385' }}>SPACE = ACTUAL IN 재생 · D2 LIVE = 웹 타임라인 자동 추종</span>",
+          "          <span style={{ marginLeft: 'auto', color: '#687385' }}>{stageMode === 'B_ARMED' ? 'SPACE = LIVE GO · D2 = 백업 GO' : 'SPACE = ACTUAL IN Preview · D2 LIVE = 웹 자동 추종'}</span>",
           "        </section>",
           "",
           timelineAnchor,
