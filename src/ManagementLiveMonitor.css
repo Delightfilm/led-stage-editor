@@ -70,10 +70,10 @@
 .rxLiveRow {
   min-height: 0;
   display: grid;
-  grid-template-columns: 29px minmax(0, 1fr) 47px;
+  grid-template-columns: 29px minmax(0, 1fr) 45px 21px;
   align-items: center;
-  gap: 4px;
-  padding: 0 7px;
+  gap: 3px;
+  padding: 0 6px;
   border-bottom: 1px solid #1d232b;
   background: #0f141a;
   font-size: 8px;
@@ -97,10 +97,15 @@
   font-weight: 800;
 }
 
-.rxLiveMs {
+.rxLiveMs,
+.rxLiveRetry {
   text-align: right;
   color: #7e8998;
   font: 700 8px ui-monospace, monospace;
+}
+
+.rxLiveRetry {
+  color: #687385;
 }
 
 @media (max-width: 1050px) {
@@ -118,15 +123,16 @@
   }
 
   .rxLiveRow {
-    grid-template-columns: 25px minmax(0, 1fr) 39px;
+    grid-template-columns: 25px minmax(0, 1fr) 36px 18px;
     gap: 2px;
-    padding: 0 5px;
+    padding: 0 4px;
     font-size: 7px;
   }
 
   .rxLiveRow b,
   .rxLiveState,
-  .rxLiveMs {
+  .rxLiveMs,
+  .rxLiveRetry {
     font-size: 7px;
   }
 }
