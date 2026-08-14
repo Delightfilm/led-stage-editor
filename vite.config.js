@@ -22,6 +22,7 @@ import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuard
 import { managementIntegrationPlugin } from './scripts/managementIntegrationPlugin.js'
 import { accountTransferPlugin } from './scripts/accountTransferPlugin.js'
 import { premiereSequenceManagerCompatPlugin } from './scripts/premiereSequenceManagerCompatPlugin.js'
+import { premiereProjectWorkspacePlugin } from './scripts/premiereProjectWorkspacePlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
@@ -35,6 +36,7 @@ import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetr
 import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
+import { managementSequenceFormationPlugin } from './scripts/managementSequenceFormationPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -83,6 +85,8 @@ export default defineConfig({
     managementRehearsalUiPlugin(),
     managementFirmwareHardenPlugin(),
     managementFrameScrubPlugin(),
+    premiereProjectWorkspacePlugin(),
+    managementSequenceFormationPlugin(),
     react(),
   ],
 })
