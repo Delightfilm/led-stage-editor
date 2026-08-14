@@ -33,6 +33,7 @@ import { managementSerialRecoveryPlugin } from './scripts/managementSerialRecove
 import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetryHeartbeatPlugin.js'
 import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
+import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -79,6 +80,7 @@ export default defineConfig({
     managementTelemetryHeartbeatPlugin(),
     managementRehearsalUiPlugin(),
     managementFirmwareHardenPlugin(),
+    managementFrameScrubPlugin(),
     react(),
   ],
 })
