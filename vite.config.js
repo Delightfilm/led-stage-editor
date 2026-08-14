@@ -27,18 +27,17 @@ import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
 import { managementABModePlugin } from './scripts/managementABModePlugin.js'
+import { managementFormationStagePlugin } from './scripts/managementFormationStagePlugin.js'
 import { liveMonitorPlugin } from './scripts/liveMonitorPlugin.js'
-import { managementElPreviewPlugin } from './scripts/managementElPreviewPlugin.js'
 import { managementLiveCueFixPlugin } from './scripts/managementLiveCueFixPlugin.js'
 import { managementOneClickLivePlugin } from './scripts/managementOneClickLivePlugin.js'
 import { managementSerialRecoveryPlugin } from './scripts/managementSerialRecoveryPlugin.js'
 import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetryHeartbeatPlugin.js'
 import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
+import { managementFirmwareSequenceDurationPlugin } from './scripts/managementFirmwareSequenceDurationPlugin.js'
 import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
-import { projectWorkspacePlaybackFixPlugin } from './scripts/projectWorkspacePlaybackFixPlugin.js'
 import { managementFirmwareDurationBridgePlugin } from './scripts/managementFirmwareDurationBridgePlugin.js'
-import { managementSequenceLatePlugin } from './scripts/managementSequenceLatePlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -78,7 +77,7 @@ export default defineConfig({
     premiereSequenceManagerCompatPlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
-    scopeManagementPlugin(managementElPreviewPlugin()),
+    managementFormationStagePlugin(),
     scopeManagementPlugin(liveMonitorPlugin()),
     scopeManagementPlugin(managementSerialSafetyPlugin()),
     managementLiveCueFixPlugin(),
@@ -87,10 +86,9 @@ export default defineConfig({
     managementTelemetryHeartbeatPlugin(),
     managementRehearsalUiPlugin(),
     managementFirmwareHardenPlugin(),
+    managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
-    projectWorkspacePlaybackFixPlugin(),
     managementFirmwareDurationBridgePlugin(),
-    managementSequenceLatePlugin(),
     react(),
   ],
 })
