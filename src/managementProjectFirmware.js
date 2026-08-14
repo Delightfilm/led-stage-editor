@@ -52,6 +52,7 @@ const addLiveTelemetryToMasterSketch = (source) => {
       "  lastPingSampleMs[i] = now;",
       "  lastPingRttUs[i] = ok ? pingRttUs : 0;",
       "  lastPingRetryCount[i] = pingRetryCount;",
+      "  if (pcHandshake) { Serial.print(\"RXPULSE \" ); Serial.println(i + 1); }",
     ].join("\n"),
     "ping timing"
   );
