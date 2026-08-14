@@ -38,17 +38,32 @@ export function liveMonitorPlugin() {
         seek,
       ].join('\n'))
 
+      const controlStart = "        <section className=\"latencyBar\">"
       const timeline = "        <div className=\"timelineScroll\" ref={timelineScrollRef} onDragStart={(e) => e.preventDefault()}>"
-      if (!out.includes('RF LIVE MONITOR')) out = out.replace(timeline, [
-        "        <section style={{padding:'8px 12px',borderBottom:'1px solid #242a32',background:'#0d1117'}}>",
-        "          <div style={{display:'flex',gap:10,alignItems:'center',fontSize:10,marginBottom:7}}><b>RF LIVE MONITOR</b><span style={{color:pingAlive?'#62e7a2':'#ff657a'}}>● PING {pingAlive?'LIVE':'TIMEOUT'}</span><span>{pingRtt==null?'USB RTT --':`USB RTT ${pingRtt.toFixed(1)} ms`}</span><span style={{marginLeft:'auto',color:'#687385'}}>RX 수치는 nRF24 PING→ACK 왕복시간</span></div>",
-        "          <div style={{display:'grid',gridTemplateColumns:'repeat(7,minmax(88px,1fr))',gap:6}}>",
-        "            {rxMon.slice(0,7).map((rx)=>{ const s=masterConnected?rx.state:'X'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':'#ff657a'; return <div key={rx.id} style={{padding:'7px 8px',border:'1px solid #2a313c',borderRadius:5,background:'#11161d'}}><div style={{display:'flex',justifyContent:'space-between',fontSize:10}}><b>RX{rx.id}</b><span style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':'OFFLINE'}</span></div><div style={{marginTop:4,fontFamily:'monospace'}}>{masterConnected&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</div></div> })}",
-        "          </div>",
-        "        </section>",
-        "",
-        timeline,
-      ].join('\n'))
+      if (!out.includes('rxLiveRail') && out.includes(controlStart) && out.includes(timeline)) {
+        out = out.replace(controlStart, [
+          "        <section className=\"stageControlDock\">",
+          "          <aside className=\"rxLiveRail\" title=\"RX 수치는 nRF24 PING→ACK 왕복시간\">",
+          "            <div className=\"rxLiveRailHead\">",
+          "              <b>RF LIVE</b>",
+          "              <span className=\"rxPingState\" style={{color:pingAlive?'#62e7a2':'#ff657a'}}>● {pingAlive?'LIVE':'TIMEOUT'}</span>",
+          "              <span className=\"rxUsbRtt\">{pingRtt==null?'RTT --':`${pingRtt.toFixed(1)} ms`}</span>",
+          "            </div>",
+          "            <div className=\"rxLiveRows\">",
+          "              {rxMon.slice(0,7).map((rx)=>{ const s=masterConnected?rx.state:'X'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':'#ff657a'; return <div key={rx.id} className=\"rxLiveRow\"><b>RX{rx.id}</b><span className=\"rxLiveState\" style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':'OFFLINE'}</span><span className=\"rxLiveMs\">{masterConnected&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</span></div> })}",
+          "            </div>",
+          "          </aside>",
+          "          <div className=\"stageControlStack\">",
+          controlStart,
+        ].join('\n'))
+
+        out = out.replace(timeline, [
+          "          </div>",
+          "        </section>",
+          "",
+          timeline,
+        ].join('\n'))
+      }
 
       return { code: out, map: null }
     },
