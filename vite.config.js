@@ -36,6 +36,8 @@ import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetr
 import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
+import { projectWorkspacePlaybackFixPlugin } from './scripts/projectWorkspacePlaybackFixPlugin.js'
+import { managementFirmwareDurationBridgePlugin } from './scripts/managementFirmwareDurationBridgePlugin.js'
 import { managementSequenceLatePlugin } from './scripts/managementSequenceLatePlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
@@ -86,6 +88,8 @@ export default defineConfig({
     managementRehearsalUiPlugin(),
     managementFirmwareHardenPlugin(),
     managementFrameScrubPlugin(),
+    projectWorkspacePlaybackFixPlugin(),
+    managementFirmwareDurationBridgePlugin(),
     managementSequenceLatePlugin(),
     react(),
   ],
