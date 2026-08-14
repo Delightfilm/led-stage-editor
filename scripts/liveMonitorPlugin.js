@@ -21,6 +21,11 @@ export function liveMonitorPlugin() {
         "      if (rows.length) { setRxMon(rows); setRxTelemetrySeen(true) }",
         "      return",
         "    }",
+        "    if (line.startsWith('LIVE_STARTED ')) {",
+        "      const offsetMs = Math.max(0, Number(line.slice(13).trim()) || 0)",
+        "      window.dispatchEvent(new CustomEvent('lsm-live-started', { detail: { offsetMs } }))",
+        "    }",
+        "    if (line === 'LIVE_FINISHED') window.dispatchEvent(new CustomEvent('lsm-live-finished'))",
         "    if (line.startsWith('PONG')) { const now = performance.now(); pongRef.current = now; setPingAlive(true); if (pingSentRef.current) setPingRtt(now - pingSentRef.current) }",
         "    addMasterLog(line)",
       ].join('\n'))
