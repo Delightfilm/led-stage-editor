@@ -20,6 +20,7 @@ import { fineBlockTimingPlugin } from './scripts/fineBlockTimingPlugin.js'
 import { defaultTimelineOpenPlugin } from './scripts/defaultTimelineOpenPlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 import { managementIntegrationPlugin } from './scripts/managementIntegrationPlugin.js'
+import { accountTransferPlugin } from './scripts/accountTransferPlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
@@ -59,6 +60,7 @@ export default defineConfig({
     defaultTimelineOpenPlugin(),
     premiereVideoBuildGuardPlugin(),
     managementIntegrationPlugin(),
+    accountTransferPlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
     scopeManagementPlugin(liveMonitorPlugin()),
