@@ -30,6 +30,7 @@ import { managementElPreviewPlugin } from './scripts/managementElPreviewPlugin.j
 import { managementLiveCueFixPlugin } from './scripts/managementLiveCueFixPlugin.js'
 import { managementOneClickLivePlugin } from './scripts/managementOneClickLivePlugin.js'
 import { managementSerialRecoveryPlugin } from './scripts/managementSerialRecoveryPlugin.js'
+import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetryHeartbeatPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -73,6 +74,7 @@ export default defineConfig({
     managementLiveCueFixPlugin(),
     managementOneClickLivePlugin(),
     managementSerialRecoveryPlugin(),
+    managementTelemetryHeartbeatPlugin(),
     react(),
   ],
 })
