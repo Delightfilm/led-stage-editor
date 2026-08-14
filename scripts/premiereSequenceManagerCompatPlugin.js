@@ -1,7 +1,9 @@
 import { premiereSequenceManagerPlugin } from './premiereSequenceManagerPlugin.js'
+import { premiereProjectWorkspacePlugin } from './premiereProjectWorkspacePlugin.js'
 
 export function premiereSequenceManagerCompatPlugin() {
   const base = premiereSequenceManagerPlugin()
+  const projectWorkspace = premiereProjectWorkspacePlugin()
   return {
     ...base,
     name: 'premiere-sequence-manager-compat',
@@ -31,7 +33,10 @@ export function premiereSequenceManagerCompatPlugin() {
           )
         }
       }
-      return base.transform.call(this, normalized, id)
+      const sequenceResult = base.transform.call(this, normalized, id)
+      if (!sequenceResult || !id.includes('src/App.jsx')) return sequenceResult
+      const sequenceCode = typeof sequenceResult === 'string' ? sequenceResult : sequenceResult.code
+      return projectWorkspace.transform.call(this, sequenceCode, id)
     },
   }
 }
