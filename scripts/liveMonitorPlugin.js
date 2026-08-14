@@ -7,7 +7,7 @@ export function liveMonitorPlugin() {
       let out = code
 
       const state = "  const [masterLog, setMasterLog] = useState([])"
-      if (!out.includes('const [rxMon, setRxMon]')) out = out.replace(state, state + "\n  const [pingAlive, setPingAlive] = useState(false)\n  const [pingRtt, setPingRtt] = useState(null)\n  const [rxMon, setRxMon] = useState(() => Array.from({ length: 7 }, (_, i) => ({ id: i + 1, state: 'X', us: 0, age: null })))")
+      if (!out.includes('const [rxMon, setRxMon]')) out = out.replace(state, state + "\n  const [pingAlive, setPingAlive] = useState(false)\n  const [pingRtt, setPingRtt] = useState(null)\n  const [rxTelemetrySeen, setRxTelemetrySeen] = useState(false)\n  const [rxMon, setRxMon] = useState(() => Array.from({ length: 7 }, (_, i) => ({ id: i + 1, state: 'X', us: 0, age: null })))")
 
       const refs = "  const lastSerialSeekAtRef = useRef(0)"
       if (!out.includes('const pingSentRef')) out = out.replace(refs, refs + "\n  const pingSentRef = useRef(0)\n  const pongRef = useRef(0)")
@@ -17,7 +17,7 @@ export function liveMonitorPlugin() {
         "    if (!line) return",
         "    if (line.startsWith('RXMON ')) {",
         "      const rows = line.slice(6).split(',').map((v) => { const [id, state, us, age] = v.split(':'); return { id: Number(id), state, us: Number(us) || 0, age: Number(age) } })",
-        "      if (rows.length) setRxMon(rows)",
+        "      if (rows.length) { setRxMon(rows); setRxTelemetrySeen(true) }",
         "      return",
         "    }",
         "    if (line.startsWith('PONG')) { const now = performance.now(); pongRef.current = now; setPingAlive(true); if (pingSentRef.current) setPingRtt(now - pingSentRef.current) }",
@@ -27,7 +27,7 @@ export function liveMonitorPlugin() {
       const seek = "  const sendSeekToMaster = (time, force = false) => {"
       if (!out.includes('const pingTimer = window.setInterval')) out = out.replace(seek, [
         "  useEffect(() => {",
-        "    if (!masterConnected || !masterProtocolReady) { setPingAlive(false); setPingRtt(null); return undefined }",
+        "    if (!masterConnected || !masterProtocolReady) { setPingAlive(false); setPingRtt(null); setRxTelemetrySeen(false); return undefined }",
         "    const ping = () => { pingSentRef.current = performance.now(); sendSerialLine('PING') }",
         "    ping()",
         "    const pingTimer = window.setInterval(ping, 1000)",
@@ -50,7 +50,7 @@ export function liveMonitorPlugin() {
           "              <span className=\"rxUsbRtt\">{pingRtt==null?'RTT --':`${pingRtt.toFixed(1)} ms`}</span>",
           "            </div>",
           "            <div className=\"rxLiveRows\">",
-          "              {rxMon.slice(0,7).map((rx)=>{ const s=masterConnected?rx.state:'X'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':'#ff657a'; return <div key={rx.id} className=\"rxLiveRow\"><b>RX{rx.id}</b><span className=\"rxLiveState\" style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':'OFFLINE'}</span><span className=\"rxLiveMs\">{masterConnected&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</span></div> })}",
+          "              {rxMon.slice(0,7).map((rx)=>{ const telemetryReady=masterConnected&&rxTelemetrySeen; const s=telemetryReady?rx.state:'W'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':s==='W'?'#8c98aa':'#ff657a'; return <div key={rx.id} className=\"rxLiveRow\"><b>RX{rx.id}</b><span className=\"rxLiveState\" style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':s==='W'?'WAIT':'OFFLINE'}</span><span className=\"rxLiveMs\">{telemetryReady&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</span></div> })}",
           "            </div>",
           "          </aside>",
           "          <div className=\"stageControlStack\">",
