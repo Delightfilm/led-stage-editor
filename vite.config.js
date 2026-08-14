@@ -20,9 +20,9 @@ import { fineBlockTimingPlugin } from './scripts/fineBlockTimingPlugin.js'
 import { defaultTimelineOpenPlugin } from './scripts/defaultTimelineOpenPlugin.js'
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 import { managementIntegrationPlugin } from './scripts/managementIntegrationPlugin.js'
+import { managementSequenceDataPlugin } from './scripts/managementSequenceDataPlugin.js'
 import { accountTransferPlugin } from './scripts/accountTransferPlugin.js'
 import { premiereSequenceManagerCompatPlugin } from './scripts/premiereSequenceManagerCompatPlugin.js'
-import { premiereProjectWorkspacePlugin } from './scripts/premiereProjectWorkspacePlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
@@ -36,7 +36,7 @@ import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetr
 import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
-import { managementSequenceFormationPlugin } from './scripts/managementSequenceFormationPlugin.js'
+import { managementSequenceLatePlugin } from './scripts/managementSequenceLatePlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -71,6 +71,7 @@ export default defineConfig({
     defaultTimelineOpenPlugin(),
     premiereVideoBuildGuardPlugin(),
     managementIntegrationPlugin(),
+    managementSequenceDataPlugin(),
     accountTransferPlugin(),
     premiereSequenceManagerCompatPlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
@@ -85,8 +86,7 @@ export default defineConfig({
     managementRehearsalUiPlugin(),
     managementFirmwareHardenPlugin(),
     managementFrameScrubPlugin(),
-    premiereProjectWorkspacePlugin(),
-    managementSequenceFormationPlugin(),
+    managementSequenceLatePlugin(),
     react(),
   ],
 })
