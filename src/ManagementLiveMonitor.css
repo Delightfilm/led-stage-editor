@@ -1,0 +1,132 @@
+.stageControlDock {
+  flex: none;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: stretch;
+  background: #0d1117;
+  border-bottom: 1px solid #242a32;
+}
+
+.stageControlStack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stageControlStack > .latencyBar,
+.stageControlStack > .syncStrip {
+  width: 100%;
+}
+
+.rxLiveRail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid #242a32;
+  background: #0d1117;
+  color: #8d98a8;
+}
+
+.rxLiveRailHead {
+  flex: 0 0 24px;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 0 7px;
+  border-bottom: 1px solid #242a32;
+  background: #10151c;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.rxLiveRailHead b {
+  color: #d4dbe6;
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
+.rxPingState {
+  font-weight: 800;
+}
+
+.rxUsbRtt {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  color: #687385;
+  font: 700 8px ui-monospace, monospace;
+}
+
+.rxLiveRows {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+}
+
+.rxLiveRow {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr) 47px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border-bottom: 1px solid #1d232b;
+  background: #0f141a;
+  font-size: 8px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.rxLiveRow:last-child {
+  border-bottom: 0;
+}
+
+.rxLiveRow b {
+  color: #cbd3df;
+  font-size: 8px;
+}
+
+.rxLiveState {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 800;
+}
+
+.rxLiveMs {
+  text-align: right;
+  color: #7e8998;
+  font: 700 8px ui-monospace, monospace;
+}
+
+@media (max-width: 1050px) {
+  .stageControlDock {
+    grid-template-columns: 154px minmax(0, 1fr);
+  }
+
+  .rxLiveRailHead {
+    grid-template-columns: auto 1fr;
+    padding: 0 5px;
+  }
+
+  .rxUsbRtt {
+    display: none;
+  }
+
+  .rxLiveRow {
+    grid-template-columns: 25px minmax(0, 1fr) 39px;
+    gap: 2px;
+    padding: 0 5px;
+    font-size: 7px;
+  }
+
+  .rxLiveRow b,
+  .rxLiveState,
+  .rxLiveMs {
+    font-size: 7px;
+  }
+}
