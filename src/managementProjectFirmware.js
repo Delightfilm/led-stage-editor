@@ -89,6 +89,28 @@ const addLiveTelemetryToMasterSketch = (source) => {
 
   code = injectRequired(
     code,
+    [
+      "  if (strcmp(line, \"PING\") == 0) {",
+      "    Serial.print(\"PONG \" ); Serial.println(millis());",
+      "    return;",
+      "  }",
+    ].join("\n"),
+    [
+      "  if (strcmp(line, \"PING\") == 0) {",
+      "    // Treat a valid browser PING as an active management-session handshake.",
+      "    // PONG and RXMON are emitted as one response pair so the web RF panel",
+      "    // cannot stay stale while the USB PING indicator is alive.",
+      "    pcHandshake = true;",
+      "    Serial.print(\"PONG \" ); Serial.println(millis());",
+      "    printRxMonitorSerial();",
+      "    return;",
+      "  }",
+    ].join("\n"),
+    "PING telemetry response"
+  );
+
+  code = injectRequired(
+    code,
     "void loop() {\n  pollSerial();\n  const uint32_t now = millis();",
     [
       "void loop() {",
