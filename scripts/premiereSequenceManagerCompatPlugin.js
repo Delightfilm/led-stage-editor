@@ -10,11 +10,6 @@ export function premiereSequenceManagerCompatPlugin() {
     transform(code, id) {
       let normalized = code
       if (id.includes('src/App.jsx')) {
-        // accountTransferPlugin replaces the legacy local JSON save/load implementation
-        // with buildCloudProjectData()/applyCloudProjectData(). The sequence manager still
-        // validates the old anchors, so provide those anchors only inside comments. Its
-        // local migration replacements remain commented out, while the real sequence
-        // persistence is applied once to the shared cloud project build/apply functions.
         normalized = normalized.replace('\nconst arduinoExportTargets', '\n  const arduinoExportTargets')
 
         const loadAnchor = '  const loadProject = async (file) => {'
@@ -33,10 +28,51 @@ export function premiereSequenceManagerCompatPlugin() {
           )
         }
       }
+
       const sequenceResult = base.transform.call(this, normalized, id)
       if (!sequenceResult || !id.includes('src/App.jsx')) return sequenceResult
       const sequenceCode = typeof sequenceResult === 'string' ? sequenceResult : sequenceResult.code
-      return projectWorkspace.transform.call(this, sequenceCode, id)
+      const projectResult = projectWorkspace.transform.call(this, sequenceCode, id)
+      if (!projectResult) return sequenceResult
+      let finalCode = typeof projectResult === 'string' ? projectResult : projectResult.code
+
+      // premiereProjectWorkspacePlugin changes the length of the playback section, so its
+      // cached index for the following play() function can land inside the dependency array.
+      // Repair it here, inside the same PRE transform, before Vite attempts to parse JSX.
+      const marker = '  /* ── 재생 루프 · sequence clock owns time ── */'
+      const start = finalCode.indexOf(marker)
+      const pauseStart = finalCode.indexOf('  const pause = () => {', start)
+      if (start < 0 || pauseStart <= start) throw new Error('sequence compat: project playback repair bounds not found')
+      const cleanPlayback = `  /* ── 재생 루프 · sequence clock owns time ── */
+  useEffect(() => {
+    if (!playing) return;
+    sequenceClockRef.current = { at: performance.now(), time: currentTime };
+    let raf;
+    const tick = (now) => {
+      const next = sequenceClockRef.current.time + (now - sequenceClockRef.current.at) / 1000;
+      if (next >= duration) {
+        setCurrentTime(duration);
+        syncMediaForSequenceTime(duration, false);
+        setPlaying(false);
+        return;
+      }
+      setCurrentTime(next);
+      syncMediaForSequenceTime(next, true);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, duration, mediaClips, videoInfo, audioInfo]);
+
+  const play = async () => {
+    sequenceClockRef.current = { at: performance.now(), time: currentTime };
+    syncMediaForSequenceTime(currentTime, true);
+    setPlaying(true);
+  };
+
+`
+      finalCode = finalCode.slice(0, start) + cleanPlayback + finalCode.slice(pauseStart)
+      return { code: finalCode, map: null }
     },
   }
 }
