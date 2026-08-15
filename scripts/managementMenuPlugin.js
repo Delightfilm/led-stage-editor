@@ -1,23 +1,33 @@
 export function managementMenuPlugin() {
   return {
-    name: 'management-menu-entry',
+    name: 'management-workspace-switcher',
     enforce: 'pre',
     transform(code, id) {
-      if (!id.includes('src/App.jsx')) return null
-      if (id.includes('ManagementApp.jsx')) return null
-      if (code.includes('LED STAGE MANAGEMENT')) return null
+      const isEditor = id.includes('src/App.jsx') && !id.includes('ManagementApp.jsx')
+      const isManagement = id.includes('src/ManagementApp.jsx')
+      if (!isEditor && !isManagement) return null
+      if (code.includes('workspaceQuickNav')) return null
 
-      const anchor = '        <div className="toolGroup right">'
-      if (!code.includes(anchor)) throw new Error('management menu: utility group anchor not found')
+      const anchor = '    <div className="app">'
+      if (!code.includes(anchor)) throw new Error('management workspace switcher: app root anchor not found')
 
-      const entry = [
-        anchor,
-        '          <button type="button" className="tbtn compact" title="B안 · MASTER/RX 실시간 관리" onClick={() => { window.location.href = \'/?workspace=management\' }}>',
-        '            🎛 LED STAGE MANAGEMENT',
-        '          </button>',
-      ].join('\n')
+      const nav = isManagement
+        ? [
+            anchor,
+            '      <nav className="workspaceQuickNav" aria-label="워크스페이스 전환">',
+            '        <button type="button" onClick={() => { window.location.href = \'/\' }}>EDITOR</button>',
+            '        <button type="button" className="active" aria-current="page">MANAGEMENT</button>',
+            '      </nav>',
+          ].join('\n')
+        : [
+            anchor,
+            '      <nav className="workspaceQuickNav" aria-label="워크스페이스 전환">',
+            '        <button type="button" className="active" aria-current="page">EDITOR</button>',
+            '        <button type="button" onClick={() => { window.location.href = \'/?workspace=management\' }}>MANAGEMENT</button>',
+            '      </nav>',
+          ].join('\n')
 
-      return { code: code.replace(anchor, entry), map: null }
+      return { code: code.replace(anchor, nav), map: null }
     },
   }
 }
