@@ -21,9 +21,11 @@ import { defaultTimelineOpenPlugin } from './scripts/defaultTimelineOpenPlugin.j
 import { premiereVideoBuildGuardPlugin } from './scripts/premiereVideoBuildGuardPlugin.js'
 import { managementIntegrationPlugin } from './scripts/managementIntegrationPlugin.js'
 import { managementSequenceDataPlugin } from './scripts/managementSequenceDataPlugin.js'
+import { managementFormationSyncFixPlugin } from './scripts/managementFormationSyncFixPlugin.js'
 import { accountTransferPlugin } from './scripts/accountTransferPlugin.js'
 import { premiereSequenceManagerCompatPlugin } from './scripts/premiereSequenceManagerCompatPlugin.js'
 import { projectLinkedMediaUxPlugin } from './scripts/projectLinkedMediaUxPlugin.js'
+import { multiProjectManagerPlugin } from './scripts/multiProjectManagerPlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
@@ -74,9 +76,11 @@ export default defineConfig({
     premiereVideoBuildGuardPlugin(),
     managementIntegrationPlugin(),
     managementSequenceDataPlugin(),
+    managementFormationSyncFixPlugin(),
     accountTransferPlugin(),
     premiereSequenceManagerCompatPlugin(),
     projectLinkedMediaUxPlugin(),
+    multiProjectManagerPlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
     managementFormationStagePlugin(),
