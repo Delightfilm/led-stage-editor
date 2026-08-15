@@ -29,6 +29,7 @@ import { multiProjectManagerPlugin } from './scripts/multiProjectManagerPlugin.j
 import { projectFootageVisibilityFixPlugin } from './scripts/projectFootageVisibilityFixPlugin.js'
 import { projectFootageDeletePlugin } from './scripts/projectFootageDeletePlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
+import { workspaceUiPolishPlugin } from './scripts/workspaceUiPolishPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
 import { managementABModePlugin } from './scripts/managementABModePlugin.js'
@@ -69,6 +70,7 @@ export default defineConfig({
     premiereProgramAspectFixPlugin(),
     premiereSingleTrackOverwritePlugin(),
     managementMenuPlugin(),
+    workspaceUiPolishPlugin(),
     premiereWorkspaceCleanupPlugin(),
     choreographyFormationPlugin(),
     formationMemorySidebarPlugin(),
