@@ -3,13 +3,25 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publis
 const MEDIA_BUCKET = "led-stage-audio";
 const MAX_MEDIA_BYTES = 300 * 1024 * 1024;
 
+const safeExt = (name = "") => {
+  const ext = String(name).split(".").pop()?.toLowerCase() || "bin";
+  return /^[a-z0-9]{1,8}$/.test(ext) ? ext : "bin";
+};
+
+const uniqueMediaPath = (userId, file) => {
+  const stamp = Date.now().toString(36);
+  const nonce = Math.random().toString(36).slice(2, 10);
+  return `${userId}/media/${stamp}-${nonce}.${safeExt(file?.name)}`;
+};
+
 export async function uploadCloudMedia(session, file, onProgress = null) {
   if (!session?.access_token || !session?.user?.id) throw new Error("로그인이 필요해요.");
   if (!file) throw new Error("미디어 파일이 없어요.");
   if (file.size > MAX_MEDIA_BYTES) throw new Error("클라우드 미디어는 300MB 이하만 업로드할 수 있어요.");
 
-  // One current media object per user. x-upsert prevents abandoned 300MB files from piling up.
-  const path = `${session.user.id}/media/current`;
+  // Each uploaded media object gets its own path so independent PROJECTS cannot overwrite
+  // one another. Existing historical metadata that points to /media/current remains readable.
+  const path = uniqueMediaPath(session.user.id, file);
   const url = `${SUPABASE_URL}/storage/v1/object/${MEDIA_BUCKET}/${path}`;
 
   await new Promise((resolve, reject) => {
