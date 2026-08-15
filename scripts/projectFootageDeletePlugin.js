@@ -15,7 +15,7 @@ export function projectFootageDeletePlugin() {
       const helperAnchor = '  const updateSequenceDuration = (id, value) => {'
       required(out.includes(helperAnchor), 'helper insertion')
       if (!out.includes('const deleteProjectAsset =')) {
-        const helpers = `  const preserveDeletedFootageClip = (clip, asset) => {
+        const helpers = String.raw`  const preserveDeletedFootageClip = (clip, asset) => {
     if (!clip || !asset || clip.assetId !== asset.id) return clip;
     return {
       ...clip,
