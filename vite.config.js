@@ -27,6 +27,7 @@ import { premiereSequenceManagerCompatPlugin } from './scripts/premiereSequenceM
 import { projectLinkedMediaUxPlugin } from './scripts/projectLinkedMediaUxPlugin.js'
 import { multiProjectManagerPlugin } from './scripts/multiProjectManagerPlugin.js'
 import { projectFootageVisibilityFixPlugin } from './scripts/projectFootageVisibilityFixPlugin.js'
+import { projectFootageDeletePlugin } from './scripts/projectFootageDeletePlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
@@ -83,6 +84,7 @@ export default defineConfig({
     projectLinkedMediaUxPlugin(),
     multiProjectManagerPlugin(),
     projectFootageVisibilityFixPlugin(),
+    projectFootageDeletePlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
     managementFormationStagePlugin(),
