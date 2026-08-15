@@ -1,0 +1,72 @@
+/* Overlap repair layer. UI/layout only; loaded after workspacePolish.css. */
+
+/* WORKSPACE navigation now participates in the toolbar layout instead of floating over it. */
+.workspaceQuickNav {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: auto !important;
+  margin-left: auto !important;
+  flex: 0 0 auto !important;
+  height: 32px !important;
+  padding: 2px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.workspaceQuickNav::before {
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+}
+
+.workspaceQuickNav button {
+  height: 26px !important;
+  padding: 0 8px !important;
+  white-space: nowrap;
+}
+
+/* The toolbar must reserve real horizontal space for the switcher. */
+.app > .toolbar {
+  padding-right: 10px !important;
+  gap: 7px !important;
+  overflow: visible !important;
+}
+
+/*
+ * EDITOR formation editor is intentionally an absolute panel inside the toolbar.
+ * choreographyFormationPlugin reserves 232px for it. The general UI polish layer
+ * accidentally collapsed every toolbar to 50px, making the 216px formation panel
+ * cover the program monitor. Restore that reserved height only when the editor
+ * actually contains a formation editor.
+ */
+.app > .toolbar:has(.formationEditor) {
+  min-height: 232px !important;
+  height: auto !important;
+  align-items: flex-start !important;
+}
+
+/* Keep the stage editor entirely inside its reserved toolbar area. */
+.app > .toolbar:has(.formationEditor) .formationEditor {
+  top: 7px !important;
+  max-height: 216px !important;
+}
+
+/* Compact the switcher before it can crowd operational controls. */
+@media (max-width: 1500px) {
+  .workspaceQuickNav::before { display: none !important; }
+  .workspaceQuickNav button {
+    padding: 0 7px !important;
+    font-size: 8px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .workspaceQuickNav {
+    margin-left: 5px !important;
+  }
+  .workspaceQuickNav button {
+    padding: 0 6px !important;
+  }
+}
