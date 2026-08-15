@@ -1,0 +1,332 @@
+/* Shared UI polish layer. Layout/visuals only: no editor or management behavior lives here. */
+:root {
+  --ws-bg: #080b10;
+  --ws-surface: #0f141b;
+  --ws-surface-2: #141b24;
+  --ws-surface-3: #1a2330;
+  --ws-border: #273241;
+  --ws-border-soft: #1d2632;
+  --ws-text: #e7edf6;
+  --ws-muted: #7f8da1;
+  --ws-accent: #6f86ff;
+  --ws-accent-2: #54d5ff;
+  --ws-good: #58dda1;
+  --ws-warn: #f4bc62;
+  --ws-danger: #ff7180;
+  --ws-radius: 8px;
+  --ws-shadow: 0 10px 30px rgba(0,0,0,.24);
+}
+
+html, body, #root { min-height: 100%; background: var(--ws-bg); }
+body { margin: 0; color: var(--ws-text); }
+.app { min-height: 100vh; background: linear-gradient(180deg,#0b0f15 0,#080b10 44%,#070a0e 100%); }
+
+/* ── persistent workspace switcher ─────────────────────────── */
+.workspaceQuickNav {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid #344156;
+  border-radius: 9px;
+  background: rgba(11,16,23,.94);
+  box-shadow: 0 8px 26px rgba(0,0,0,.35);
+  backdrop-filter: blur(14px);
+}
+.workspaceQuickNav::before {
+  content: 'WORKSPACE';
+  padding: 0 7px 0 6px;
+  color: #647186;
+  font: 800 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing: .10em;
+}
+.workspaceQuickNav button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #8897aa;
+  font: 800 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease;
+}
+.workspaceQuickNav button:hover { color: #eef4ff; background: #192230; border-color: #34455e; }
+.workspaceQuickNav button:active { transform: translateY(1px); }
+.workspaceQuickNav button.active {
+  color: #fff;
+  background: linear-gradient(180deg,#465ee4,#354cc4);
+  border-color: #778cff;
+  box-shadow: 0 3px 10px rgba(68,91,220,.30);
+}
+
+/* ── shared toolbar + controls ─────────────────────────────── */
+.app > .toolbar {
+  position: sticky !important;
+  top: 0;
+  z-index: 9000 !important;
+  min-height: 50px !important;
+  padding-right: 255px !important;
+  border-bottom: 1px solid var(--ws-border) !important;
+  background: rgba(11,15,21,.94) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  backdrop-filter: blur(14px);
+}
+.logoTitle { color: #f1f5fb !important; letter-spacing: .045em; }
+.logoSub { color: #718096 !important; }
+.toolbar .tbtn,
+.toolbar button,
+.transportBar button,
+.latencyBar button,
+.timelineFooter button {
+  transition: border-color .14s ease,background .14s ease,color .14s ease,transform .1s ease;
+}
+.toolbar .tbtn:hover,
+.transportBar button:hover,
+.latencyBar button:hover,
+.timelineFooter button:hover { border-color: #52647d !important; color: #f3f7ff !important; }
+.toolbar button:active,
+.transportBar button:active,
+.latencyBar button:active,
+.timelineFooter button:active { transform: translateY(1px); }
+.statusDot { box-shadow: 0 0 0 2px rgba(255,255,255,.035); }
+.statusDot.ok { box-shadow: 0 0 8px rgba(88,221,161,.42); }
+
+/* ── Editor: project / footage / sequence hierarchy ───────── */
+.projectDock {
+  min-height: 38px !important;
+  padding: 5px 9px !important;
+  gap: 7px !important;
+  border-top: 1px solid var(--ws-border-soft) !important;
+  border-bottom: 1px solid var(--ws-border) !important;
+  background: #0d1219 !important;
+}
+.projectFolderBtn,.projectImportBtn {
+  height: 27px !important;
+  border-radius: 6px !important;
+  border-color: #344253 !important;
+  background: #161e28 !important;
+}
+.projectFolderBtn.on { background: #202b45 !important; border-color: #586fd0 !important; }
+.projectPath { margin-left: 3px; color: #738198 !important; }
+.projectPanel {
+  max-height: 270px !important;
+  padding: 8px !important;
+  gap: 8px !important;
+  border-bottom: 1px solid var(--ws-border) !important;
+  background: #0b1016 !important;
+  scrollbar-color: #334052 #111821;
+}
+.projectTreeGroup {
+  border-color: var(--ws-border) !important;
+  border-radius: var(--ws-radius) !important;
+  background: #10161e !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.018);
+}
+.projectTreeTitle {
+  min-height: 31px !important;
+  background: #151d27 !important;
+  border-bottom: 1px solid #222c39;
+  color: #dce5f1 !important;
+  letter-spacing: .025em;
+}
+.projectAssetList,.projectCollectionList { padding: 6px !important; gap: 4px !important; }
+.projectAssetRow,.projectCollectionRow,.projectSequenceRow {
+  border-radius: 6px !important;
+  background: #0e141c !important;
+  border-color: #192330 !important;
+}
+.projectAssetRow:hover,.projectCollectionRow:hover,.projectSequenceRow:hover { background: #141c27 !important; border-color: #2c3a4d !important; }
+.projectAssetRow.loaded,.projectCollectionRow.on,.projectSequenceRow.on {
+  background: #18223a !important;
+  border-color: #5369cf !important;
+  box-shadow: inset 3px 0 #6f86ff;
+}
+.projectAssetActions { gap: 5px !important; }
+.projectAssetActions button,.projectCollectionRow button,.sequenceManagerRow button { border-radius: 5px !important; }
+.projectAssetDeleteBtn { opacity: .82; }
+.projectAssetDeleteBtn:hover { opacity: 1; }
+.sequenceManagerRow { min-height: 39px; border-bottom: 1px solid #1e2835; }
+.sequenceDurationEdit { border-color: #2d3948 !important; background: #0d131b !important; }
+
+/* media tracks read like a compact NLE */
+.projectMediaTrack {
+  min-height: 32px !important;
+  border-bottom: 1px solid #222c39 !important;
+  background-color: #0b1118 !important;
+  background-image: linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size: 40px 100%;
+}
+.projectMediaTrackLabel {
+  width: 44px !important;
+  border-right: 1px solid #354256 !important;
+  background: #151d28 !important;
+  color: #9aabc1 !important;
+  box-shadow: 3px 0 8px rgba(0,0,0,.18);
+}
+.mediaClip { border-radius: 4px !important; box-shadow: 0 2px 7px rgba(0,0,0,.24); }
+
+/* Editor timeline readability */
+.timelineScroll {
+  scrollbar-color: #3a485a #0b1016;
+  background: #090d12 !important;
+  border-top: 1px solid #26313f !important;
+  border-bottom: 1px solid #202a36 !important;
+}
+.ruler { background: #111821 !important; border-bottom-color: #2b3745 !important; }
+.trackRow { border-bottom-color: #1b2531 !important; }
+.trackLabel {
+  background: #121922 !important;
+  box-shadow: 4px 0 10px rgba(0,0,0,.22);
+}
+.trackLane { background-image: linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px); background-size: 40px 100%; }
+.block { box-shadow: 0 2px 7px rgba(0,0,0,.28); }
+
+/* Generic panels in the left inspector / formation tools */
+.panel {
+  border-color: var(--ws-border) !important;
+  border-radius: var(--ws-radius) !important;
+  background: var(--ws-surface) !important;
+  box-shadow: 0 5px 18px rgba(0,0,0,.14);
+}
+.panelHead { border-bottom-color: #252f3c !important; }
+
+/* ── Management: operational hierarchy ───────────────────── */
+.fullWorkspace {
+  gap: 8px !important;
+  padding: 9px 10px 14px !important;
+  background: #090d12 !important;
+}
+.programPanel,
+.latencyBar,
+.syncStrip,
+.managementFormationPanel {
+  border: 1px solid var(--ws-border) !important;
+  border-radius: 9px !important;
+  background: #0f151d !important;
+  box-shadow: var(--ws-shadow);
+  overflow: hidden;
+}
+.programPanel { order: 0; }
+.programHeader {
+  min-height: 34px !important;
+  padding: 0 10px !important;
+  border-bottom: 1px solid #26313e !important;
+  background: #151d27 !important;
+}
+.programHeader > span:first-child {
+  color: #f2f5fa !important;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.programMediaName { color: #8290a4 !important; }
+.programStage { background: #05070a !important; }
+.programViewport { border: 1px solid #202b38; box-shadow: 0 12px 36px rgba(0,0,0,.35); }
+.transportBar {
+  min-height: 38px !important;
+  padding: 4px 10px !important;
+  border-top: 1px solid #202b37 !important;
+  background: #111821 !important;
+}
+.transportPlay { background: #314cc2 !important; border-color: #627af0 !important; color: white !important; }
+.transportTime { font-variant-numeric: tabular-nums; }
+
+.latencyBar {
+  order: 1;
+  min-height: 56px !important;
+  padding: 8px 10px !important;
+  border-left: 3px solid #d8a94e !important;
+  background: linear-gradient(90deg,rgba(216,169,78,.06),#0f151d 22%) !important;
+}
+.latencyLabel { color: #b69a66 !important; letter-spacing: .08em; }
+.delayNudges button,.delayNudges input { min-height: 27px; border-radius: 5px !important; }
+.inReadouts { border-left: 1px solid #2a3441; padding-left: 10px; }
+
+.syncStrip {
+  order: 2;
+  min-height: 38px !important;
+  padding: 6px 10px !important;
+  background: #0c1219 !important;
+  box-shadow: none;
+}
+.readOnlyBadge,.offlineBadge { border-radius: 999px !important; padding: 3px 7px !important; }
+
+.managementFormationPanel {
+  order: 3;
+  padding: 0 !important;
+  border-bottom: 1px solid var(--ws-border) !important;
+  background: #0f151d !important;
+}
+.managementFormationHead {
+  height: 38px !important;
+  padding: 0 10px;
+  border-bottom: 1px solid #26313e;
+  background: #151d27;
+}
+.managementFormationHead b { font-size: 10px !important; letter-spacing: .075em !important; }
+.managementFormationStage {
+  height: 260px !important;
+  margin: 9px !important;
+  border-color: #344153 !important;
+  border-radius: 8px !important;
+  background:
+    radial-gradient(circle at 50% 90%,rgba(80,100,140,.10),transparent 38%),
+    linear-gradient(180deg,#121a26,#080d14 76%,#101721) !important;
+  box-shadow: inset 0 0 40px rgba(0,0,0,.28);
+}
+.managementFormationName { box-shadow: 0 3px 9px rgba(0,0,0,.32); }
+
+.fullWorkspace > .timelineScroll {
+  order: 4;
+  min-height: 260px;
+  border: 1px solid var(--ws-border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--ws-shadow);
+}
+.timelineFooter {
+  order: 5;
+  min-height: 36px !important;
+  margin-top: -2px;
+  border: 1px solid var(--ws-border) !important;
+  border-radius: 7px !important;
+  background: #0f151d !important;
+}
+
+/* Management header status reads as one coherent control strip. */
+.masterStatusGroup,.onlineState {
+  min-height: 30px;
+  padding: 3px 6px !important;
+  border: 1px solid #283444;
+  border-radius: 7px;
+  background: #101720;
+}
+.syncBtn { border-color: #38506a !important; color: #b8ddff !important; }
+
+/* ── responsive without removing controls ─────────────────── */
+@media (max-width: 1180px) {
+  .workspaceQuickNav::before { display: none; }
+  .app > .toolbar { padding-right: 205px !important; }
+  .workspaceQuickNav button { padding: 0 8px; }
+  .managementFormationStage { height: 225px !important; }
+}
+@media (max-width: 820px) {
+  .workspaceQuickNav {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+    height: 38px;
+    border-color: #465571;
+  }
+  .app > .toolbar { padding-right: 8px !important; }
+  .projectPanel { grid-template-columns: 1fr !important; max-height: 310px !important; }
+  .fullWorkspace { padding: 6px !important; }
+  .managementFormationStage { height: 195px !important; margin: 6px !important; }
+  .latencyBar { gap: 6px !important; }
+}
