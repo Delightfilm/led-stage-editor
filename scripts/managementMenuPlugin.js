@@ -8,26 +8,28 @@ export function managementMenuPlugin() {
       if (!isEditor && !isManagement) return null
       if (code.includes('workspaceQuickNav')) return null
 
-      const anchor = '    <div className="app">'
-      if (!code.includes(anchor)) throw new Error('management workspace switcher: app root anchor not found')
+      const headerAnchor = '<header className="toolbar">'
+      const headerStart = code.indexOf(headerAnchor)
+      if (headerStart < 0) throw new Error('management workspace switcher: toolbar anchor not found')
+      const headerEnd = code.indexOf('</header>', headerStart)
+      if (headerEnd < 0) throw new Error('management workspace switcher: toolbar close anchor not found')
 
       const nav = isManagement
         ? [
-            anchor,
-            '      <nav className="workspaceQuickNav" aria-label="워크스페이스 전환">',
-            '        <button type="button" onClick={() => { window.location.href = \'/\' }}>EDITOR</button>',
-            '        <button type="button" className="active" aria-current="page">MANAGEMENT</button>',
-            '      </nav>',
+            '        <nav className="workspaceQuickNav" aria-label="워크스페이스 전환">',
+            '          <button type="button" onClick={() => { window.location.href = \'/\' }}>EDITOR</button>',
+            '          <button type="button" className="active" aria-current="page">MANAGEMENT</button>',
+            '        </nav>',
           ].join('\n')
         : [
-            anchor,
-            '      <nav className="workspaceQuickNav" aria-label="워크스페이스 전환">',
-            '        <button type="button" className="active" aria-current="page">EDITOR</button>',
-            '        <button type="button" onClick={() => { window.location.href = \'/?workspace=management\' }}>MANAGEMENT</button>',
-            '      </nav>',
+            '        <nav className="workspaceQuickNav" aria-label="워크스페이스 전환">',
+            '          <button type="button" className="active" aria-current="page">EDITOR</button>',
+            '          <button type="button" onClick={() => { window.location.href = \'/?workspace=management\' }}>MANAGEMENT</button>',
+            '        </nav>',
           ].join('\n')
 
-      return { code: code.replace(anchor, nav), map: null }
+      const next = code.slice(0, headerEnd) + nav + '\n      ' + code.slice(headerEnd)
+      return { code: next, map: null }
     },
   }
 }
