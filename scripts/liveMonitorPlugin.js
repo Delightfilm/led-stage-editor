@@ -15,7 +15,12 @@ export function liveMonitorPlugin() {
       const parser = "    if (!line) return\n    addMasterLog(line)"
       if (!out.includes("line.startsWith('RXMON ')")) out = out.replace(parser, [
         "    if (!line) return",
-        "    if (line.startsWith('RXPULSE ')) { pongRef.current = performance.now(); return }",
+        "    if (line.startsWith('RXP ') || line.startsWith('RXPULSE ')) {",
+        "      const now = performance.now(); pongRef.current = now; setPingAlive(true)",
+        "      const pulseId = Number(line.startsWith('RXP ') ? line.slice(4) : line.slice(8)) || null",
+        "      if (pulseId) setRxPulseId(pulseId)",
+        "      return",
+        "    }",
         "    if (line.startsWith('RXMON ')) {",
         "      const now = performance.now(); pongRef.current = now; setPingAlive(true)",
         "      const rows = line.slice(6).split(',').map((v) => { const [id, state, us, age, retry] = v.split(':'); return { id: Number(id), state, us: Number(us) || 0, age: Number(age), retry: Number(retry) || 0 } })",
@@ -50,7 +55,7 @@ export function liveMonitorPlugin() {
       if (!out.includes('rxLiveRail') && out.includes(controlStart) && out.includes(timeline)) {
         out = out.replace(controlStart, [
           "        <section className=\"stageControlDock\">",
-          "          <aside className=\"rxLiveRail\" title=\"LIVE는 MASTER의 RXMON/PONG 텔레메트리 기준 · RX ms는 nRF24 PING→ACK 왕복시간\">",
+          "          <aside className=\"rxLiveRail\" title=\"LIVE는 MASTER의 실제 RX PING pulse + RXMON/PONG 텔레메트리 기준 · RX ms는 nRF24 PING→ACK 왕복시간\">",
           "            <div className=\"rxLiveRailHead\">",
           "              <b>RF LIVE</b>",
           "              <span className=\"rxPingState\" style={{color:pingAlive?'#62e7a2':'#ff657a'}}>● {pingAlive?'LIVE':'TIMEOUT'}</span>",
