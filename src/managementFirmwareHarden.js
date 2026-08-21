@@ -27,10 +27,19 @@ export function hardenStageMasterFirmware(source) {
     'master link scan rate'
   )
 
+  code = replaceRequired(
+    code,
+    '#define LINK_FAIL_MS 1000UL',
+    '#define LINK_FAIL_MS 2500UL',
+    'master link fail grace'
+  )
+
+  // Preserve the proven production ACK retry window. Freeze prevention is handled by
+  // bounded Serial work, staggered RF maintenance and telemetry throttling instead of
+  // weakening the radio retry policy.
   if (!code.includes('radio.setRetries(3, 5);')) {
     throw new Error('stage firmware harden: master RF retry anchor not found')
   }
-  code = code.replaceAll('radio.setRetries(3, 5);', 'radio.setRetries(1, 3);')
 
   code = replaceRequired(
     code,
