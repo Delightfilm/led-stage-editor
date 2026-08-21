@@ -44,8 +44,8 @@ export function hardenStageMasterFirmware(source) {
   code = replaceRequired(
     code,
     '  if (pcHandshake) { Serial.print("RXPULSE " ); Serial.println(i + 1); }',
-    '  // Do not emit one Serial line per RF ping. RXMON is throttled and carries the same data.',
-    'master RXPULSE flood removal'
+    '  // Lightweight visual pulse only. Drop it if USB TX is busy; never block MASTER.\n  if (pcHandshake && Serial.availableForWrite() >= 8) { Serial.print("RXP " ); Serial.println(i + 1); }',
+    'master nonblocking RX pulse telemetry'
   )
 
   code = replaceRequired(
