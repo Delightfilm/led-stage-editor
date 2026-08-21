@@ -8,6 +8,53 @@ export function hardenStageMasterFirmware(source) {
 
   code = replaceRequired(
     code,
+    '#include <LiquidCrystal_I2C.h>',
+    '#include <LiquidCrystal_I2C.h>\n#include <avr/wdt.h>',
+    'master watchdog include'
+  )
+
+  code = replaceRequired(
+    code,
+    '#define TELEMETRY_INTERVAL_MS 500UL',
+    '#define TELEMETRY_INTERVAL_MS 1000UL',
+    'master telemetry rate'
+  )
+
+  code = replaceRequired(
+    code,
+    '#define LINK_SCAN_INTERVAL_MS 60UL',
+    '#define LINK_SCAN_INTERVAL_MS 100UL',
+    'master link scan rate'
+  )
+
+  if (!code.includes('radio.setRetries(3, 5);')) {
+    throw new Error('stage firmware harden: master RF retry anchor not found')
+  }
+  code = code.replaceAll('radio.setRetries(3, 5);', 'radio.setRetries(1, 3);')
+
+  code = replaceRequired(
+    code,
+    '  if (pcHandshake) { Serial.print("RXPULSE " ); Serial.println(i + 1); }',
+    '  // Do not emit one Serial line per RF ping. RXMON is throttled and carries the same data.',
+    'master RXPULSE flood removal'
+  )
+
+  code = replaceRequired(
+    code,
+    'void printRxMonitorSerial() {\n  const uint32_t now = millis();',
+    'void printRxMonitorSerial() {\n  if (!pcHandshake || Serial.availableForWrite() < 32) return;\n  const uint32_t now = millis();',
+    'master telemetry backpressure'
+  )
+
+  code = replaceRequired(
+    code,
+    'bool lastStart = false;',
+    'bool lastStart = false;\nbool startRawState = false;\nuint32_t startRawChangedMs = 0;',
+    'master nonblocking start state'
+  )
+
+  code = replaceRequired(
+    code,
     'const byte CMD_PREVIEW_SEEK = 6, CMD_PREVIEW_PLAY = 7, CMD_PREVIEW_PAUSE = 8, CMD_PREVIEW_STOP = 9;',
     'const byte CMD_PREVIEW_SEEK = 6, CMD_PREVIEW_PLAY = 7, CMD_PREVIEW_PAUSE = 8, CMD_PREVIEW_STOP = 9;\nconst byte CMD_FORCE_STOP = 10;',
     'master force-stop command'
@@ -77,6 +124,55 @@ void sendStartFromOffsetNow(uint32_t offsetMs) {
     'master early stop transport'
   )
 
+  code = replaceRequired(
+    code,
+    'uint32_t parseSerialUInt(const char* p) {',
+    `void pollStartSwitchFast() {
+  const bool raw = digitalRead(START_PIN) == LOW;
+  const uint32_t now = millis();
+  if (raw != startRawState) {
+    startRawState = raw;
+    startRawChangedMs = now;
+    return;
+  }
+  if (raw != lastStart && now - startRawChangedMs >= 20UL) {
+    lastStart = raw;
+    if (raw) requestStart();
+  }
+}
+
+uint32_t parseSerialUInt(const char* p) {`,
+    'master fast start poller'
+  )
+
+  code = replaceRequired(
+    code,
+    'void pollSerial() {\n  while (Serial.available() > 0) {',
+    'void pollSerial() {\n  byte serialBudget = 24;\n  while (serialBudget-- > 0 && Serial.available() > 0) {',
+    'master serial work budget'
+  )
+
+  code = replaceRequired(
+    code,
+    'void setup() {\n  Serial.begin(SERIAL_BAUD);',
+    'void setup() {\n  MCUSR = 0;\n  wdt_disable();\n  Serial.begin(SERIAL_BAUD);',
+    'master watchdog setup start'
+  )
+
+  code = replaceRequired(
+    code,
+    '  lastStart = digitalRead(START_PIN) == LOW;',
+    '  lastStart = digitalRead(START_PIN) == LOW;\n  startRawState = lastStart;\n  startRawChangedMs = millis();',
+    'master start debounce init'
+  )
+
+  code = replaceRequired(
+    code,
+    '  Serial.println("LSM_READY LSM-B1 AB_DUAL");\n}',
+    '  Serial.println("LSM_READY LSM-B1 AB_DUAL");\n  wdt_enable(WDTO_2S);\n  wdt_reset();\n}',
+    'master watchdog enable'
+  )
+
   const liveStartAnchor = '  if (strncmp(line, "LIVE_START " , 11) == 0) {'
   const extraCommands = `  if (strcmp(line, "LIVE_FORCE_STOP") == 0) {
     if (showPlaying) forceStopShow();
@@ -99,20 +195,59 @@ void sendStartFromOffsetNow(uint32_t offsetMs) {
 ${liveStartAnchor}`
   code = replaceRequired(code, liveStartAnchor, extraCommands, 'master live serial commands')
 
+  code = replaceRequired(
+    code,
+    '\n  if (now - lastShowStateMs >= SHOW_STATE_INTERVAL_MS) {',
+    '\n  else if (now - lastShowStateMs >= SHOW_STATE_INTERVAL_MS) {',
+    'master stagger show-state RF work'
+  )
+
+  code = replaceRequired(
+    code,
+    '\n  if (now - lastScanMs >= LINK_SCAN_INTERVAL_MS) {',
+    '\n  else if (now - lastScanMs >= LINK_SCAN_INTERVAL_MS) {',
+    'master stagger link-scan RF work'
+  )
+
+  const oldStartTail = `  const bool start = digitalRead(START_PIN) == LOW;
+  if (start != lastStart) {
+    delay(20);
+    const bool v = digitalRead(START_PIN) == LOW;
+    if (v != lastStart) {
+      lastStart = v;
+      if (v) requestStart();  // OFF -> ON only
+      // ON -> OFF only rearms the physical switch; it never sends STOP.
+    }
+  }`
+  code = replaceRequired(
+    code,
+    oldStartTail,
+    '  pollStartSwitchFast();\n  wdt_reset();',
+    'master blocking D2 debounce removal'
+  )
+
   const loopAnchor = `void loop() {
   pollSerial();
   const uint32_t now = millis();`
   code = replaceRequired(
     code,
     loopAnchor,
-    `${loopAnchor}
+    `void loop() {
+  // Physical START is the highest-priority path. It is sampled before and after
+  // bounded Serial work so RF diagnostics can never starve D2.
+  pollStartSwitchFast();
+  pollSerial();
+  pollStartSwitchFast();
+  wdt_reset();
+  const uint32_t now = millis();
 
   // HARD_END_GUARD: resolve PLAY before RF/telemetry work at the exact programmed end.
   if (showPlaying && SHOW_DURATION_MS > 0 && (int32_t)(now - showStartMasterMs) >= 0 && (now - showStartMasterMs) >= SHOW_DURATION_MS) {
     finishShow();
+    wdt_reset();
     return;
   }`,
-    'master hard end guard'
+    'master hard end + fast-input guard'
   )
 
   return code
