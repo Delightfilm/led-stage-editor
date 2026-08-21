@@ -15,7 +15,7 @@ export function liveMonitorPlugin() {
       const parser = "    if (!line) return\n    addMasterLog(line)"
       if (!out.includes("line.startsWith('RXMON ')")) out = out.replace(parser, [
         "    if (!line) return",
-        "    if (line.startsWith('RXPULSE ')) { const now = performance.now(); pongRef.current = now; setPingAlive(true); setRxPulseId(Number(line.slice(8)) || null); return }",
+        "    if (line.startsWith('RXPULSE ')) { pongRef.current = performance.now(); return }",
         "    if (line.startsWith('RXMON ')) {",
         "      const now = performance.now(); pongRef.current = now; setPingAlive(true)",
         "      const rows = line.slice(6).split(',').map((v) => { const [id, state, us, age, retry] = v.split(':'); return { id: Number(id), state, us: Number(us) || 0, age: Number(age), retry: Number(retry) || 0 } })",
@@ -32,14 +32,14 @@ export function liveMonitorPlugin() {
       ].join('\n'))
 
       const seek = "  const sendSeekToMaster = (time, force = false) => {"
-      if (!out.includes('const pingTimer = window.setInterval')) out = out.replace(seek, [
+      if (!out.includes('MANAGEMENT_RF_HEALTH_ONLY')) out = out.replace(seek, [
+        "  // MANAGEMENT_RF_HEALTH_ONLY",
+        "  // PING transmission is owned by managementTelemetryHeartbeatPlugin. Keeping",
+        "  // this effect health-only prevents two heartbeat loops from queueing writes.",
         "  useEffect(() => {",
         "    if (!masterConnected) { setPingAlive(false); setPingRtt(null); setRxTelemetrySeen(false); setRxPulseId(null); pongRef.current = 0; return undefined }",
-        "    const ping = () => { pingSentRef.current = performance.now(); sendSerialLine('PING') }",
-        "    ping()",
-        "    const pingTimer = window.setInterval(ping, 1000)",
         "    const healthTimer = window.setInterval(() => setPingAlive(pongRef.current > 0 && performance.now() - pongRef.current < 2500), 400)",
-        "    return () => { window.clearInterval(pingTimer); window.clearInterval(healthTimer) }",
+        "    return () => window.clearInterval(healthTimer)",
         "  }, [masterConnected])",
         "",
         seek,
@@ -50,7 +50,7 @@ export function liveMonitorPlugin() {
       if (!out.includes('rxLiveRail') && out.includes(controlStart) && out.includes(timeline)) {
         out = out.replace(controlStart, [
           "        <section className=\"stageControlDock\">",
-          "          <aside className=\"rxLiveRail\" title=\"LIVE는 MASTER의 실제 RXPULSE/RXMON/PONG 텔레메트리 기준 · RX ms는 nRF24 PING→ACK 왕복시간\">",
+          "          <aside className=\"rxLiveRail\" title=\"LIVE는 MASTER의 RXMON/PONG 텔레메트리 기준 · RX ms는 nRF24 PING→ACK 왕복시간\">",
           "            <div className=\"rxLiveRailHead\">",
           "              <b>RF LIVE</b>",
           "              <span className=\"rxPingState\" style={{color:pingAlive?'#62e7a2':'#ff657a'}}>● {pingAlive?'LIVE':'TIMEOUT'}</span>",
