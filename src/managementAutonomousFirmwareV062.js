@@ -6,41 +6,30 @@ const replaceRequired = (source, from, to, label) => {
 export function applyAutonomousAFirmwareV062(source) {
   let code = source
 
-  const oldRequestStart = `void requestStart() {
-  // Once a LIVE show is running, neither D2 nor PC preview may interrupt it.
-  if (showPlaying) return;
-
-  // A = standalone, always starts from timeline 0.
-  // B = only after an explicit ARM_B from the PC; D2 then starts from that pre-roll offset.
-  const uint32_t offsetMs = (pcHandshake && bArmed) ? armedOffsetMs : 0;
-  sendStartFromOffset(offsetMs);
-  bArmed = false;
-  if (pcHandshake) {
-    Serial.print("LIVE_STARTED " );
-    Serial.println(offsetMs);
-  }
-}`
-
-  const newRequestStart = `void requestStart() {
-  // Once a LIVE show is running, physical D2 never interrupts or restarts it.
-  if (showPlaying) return;
-
-  const bool useBStart = pcHandshake && bArmed;
+  // v0.6.6 generator hardening:
+  // Do not match the entire requestStart() body. Later firmware layers legitimately
+  // changed LIVE_STARTED telemetry, and an unrelated log-line change must never make
+  // MASTER/RX generation fail. Patch only the actual A/B start decision core.
+  const oldStartCore = `  const uint32_t offsetMs = (pcHandshake && bArmed) ? armedOffsetMs : 0;
+  sendStartFromOffset(offsetMs);`
+  const newStartCore = `  const bool useBStart = pcHandshake && bArmed;
   const uint32_t offsetMs = useBStart ? armedOffsetMs : 0;
 
   // v0.6.2 timing split:
   // - B D2 start uses the user-selected runtimeStartLeadMs.
   // - Standalone A D2 is always immediate (0 ms START LEAD).
   if (useBStart) sendStartFromOffset(offsetMs);
-  else sendStartFromOffsetNow(0);
+  else sendStartFromOffsetNow(0);`
 
-  bArmed = false;
-  if (pcHandshake) {
-    Serial.print("LIVE_STARTED " );
-    Serial.println(offsetMs);
+  if (!code.includes(newStartCore)) {
+    code = replaceRequired(code, oldStartCore, newStartCore, 'requestStart A/B split core')
   }
-}`
-  code = replaceRequired(code, oldRequestStart, newRequestStart, 'requestStart A/B split')
+
+  const oldComment = `  // A = standalone, always starts from timeline 0.
+  // B = only after an explicit ARM_B from the PC; D2 then starts from that pre-roll offset.`
+  const newComment = `  // A = standalone D2, always starts from timeline 0 with zero START LEAD.
+  // B = only after an explicit ARM_B from the PC; D2 uses the selected B START LEAD.`
+  if (code.includes(oldComment)) code = code.replace(oldComment, newComment)
 
   const commandAnchor = `  if (strcmp(line, "LIVE_FORCE_STOP") == 0) {`
   const autonomousCommand = `  if (strncmp(line, "A_LIVE_START_NOW " , 17) == 0) {
@@ -57,7 +46,9 @@ export function applyAutonomousAFirmwareV062(source) {
   }
 
 ${commandAnchor}`
-  code = replaceRequired(code, commandAnchor, autonomousCommand, 'A live re-anchor command')
+  if (!code.includes('A_LIVE_START_NOW ')) {
+    code = replaceRequired(code, commandAnchor, autonomousCommand, 'A live re-anchor command')
+  }
 
   return code
 }
