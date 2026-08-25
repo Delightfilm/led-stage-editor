@@ -8,10 +8,12 @@ export function managementSafetyV065BundleAuditPlugin() {
         .join('\n')
 
       const required = [
-        ['WEB v0.6.10', 'visible web version'],
-        ['A CLOCK ·', 'persistent A CLOCK diagnostic badge'],
-        ['MASTER SCHEDULED', 'A CLOCK scheduled acknowledgement visibility'],
-        ['FAILED · USB WRITE', 'A CLOCK local-playback fail clarity'],
+        ['WEB v0.6.11', 'visible web version'],
+        ['① B LIVE START', 'first-stage B LIVE control'],
+        ['② A 독립 전환 · 공연 LOCK', 'second-stage A performance lock'],
+        ['A LOCK · COMMITTED', 'committed independent performance state'],
+        ['A LOCK · B LIVE REQUIRED', 'standby A lock guard'],
+        ['MASTER/RF 손실 허용', 'independent handoff operator feedback'],
         ['MASTER SRAM v0.6.9', 'MASTER flash-string optimizer'],
         ['unoptimized static Serial/LCD print string remains', 'MASTER SRAM leftover-string guard'],
         ['requestStart A/B split core', 'robust autonomous firmware generator anchor'],
@@ -23,7 +25,7 @@ export function managementSafetyV065BundleAuditPlugin() {
         ['mgmt-ack-freshness-v065', 'RX ACK freshness hash marker'],
         ['mgmt-schedule-telemetry-v065', 'scheduled A telemetry hash marker'],
         ['radio.flush_tx();', 'fresh ACK payload guard'],
-        ['A CLOCK LOCK starts locally without a new RF packet at GO', 'scheduled A immediate status refresh'],
+        ['A CLOCK LOCK starts locally without a new RF packet at GO', 'retained legacy physical A schedule safety'],
         ['completedEpochValid', 'completed epoch tombstone'],
         ['LIVE STATE UNKNOWN', 'uncertain START restart lock'],
         ['FW MATCH', 'web/firmware bundle match indicator'],
@@ -31,16 +33,13 @@ export function managementSafetyV065BundleAuditPlugin() {
         ['QUARANTINE V', 'hash mismatch isolation'],
         ['JOIN WAIT', 'offline receiver join state'],
         ['LIVE / LOCAL', 'actual RX local-live telemetry'],
+        ['A 독립 LIVE는 중간 정지/강제종료가 잠겨 있습니다.', 'A force-stop lock'],
       ]
 
       const missing = required.filter(([needle]) => !code.includes(needle))
       if (missing.length) {
-        throw new Error(`v0.6.10 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
+        throw new Error(`v0.6.11 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
       }
-
-      // Runtime transform helpers intentionally retain older protocol strings as
-      // search anchors. Positive marker checks verify the generator compatibility,
-      // v0.6.5 safety layers, v0.6.9 SRAM optimization, and v0.6.10 A diagnostics.
     },
   }
 }
