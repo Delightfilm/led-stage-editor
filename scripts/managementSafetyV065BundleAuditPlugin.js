@@ -8,9 +8,11 @@ export function managementSafetyV065BundleAuditPlugin() {
         .join('\n')
 
       const required = [
-        ['WEB v0.6.7', 'visible web version'],
+        ['WEB v0.6.8', 'visible web version'],
         ['requestStart A/B split core', 'robust autonomous firmware generator anchor'],
         ['v0.6.7 firmware: structural master STATUS ready/count tail not found', 'structural MASTER status normalization'],
+        ['v0.6.8 receiver safety: structural stopPlayback anchor not found', 'structural RX stopPlayback normalization'],
+        ['v0.6.8 receiver safety: v0.6.5 tombstone output not found', 'RX PREVIEW reset restore guard'],
         ['V065 BUNDLE', 'MASTER v0.6.5 bundle handshake'],
         ['FIRMWARE_BUNDLE_HASH', 'MASTER bundle hash define'],
         ['mgmt-ack-freshness-v065', 'RX ACK freshness hash marker'],
@@ -28,11 +30,11 @@ export function managementSafetyV065BundleAuditPlugin() {
 
       const missing = required.filter(([needle]) => !code.includes(needle))
       if (missing.length) {
-        throw new Error(`v0.6.7 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
+        throw new Error(`v0.6.8 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
       }
 
       // Runtime transform helpers intentionally retain older protocol strings as
-      // search anchors. Positive marker checks verify both generator compatibility
+      // search anchors. Positive marker checks verify the generator compatibility
       // shims plus the v0.6.5 firmware safety layers in the final production bundle.
     },
   }
