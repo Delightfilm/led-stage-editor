@@ -5,41 +5,37 @@ export function managementFirmwareDurationBridgePlugin() {
       if (!id.includes('src/ManagementApp.jsx')) return null
       let out = code
 
-      // Always normalize the firmware bundle call. Do not return early merely because
-      // another transform already inserted showDurationMs somewhere else in the file.
       const plainCall = /buildManagementFirmwareBundle\(\{\s*costumes\s*,\s*blocks\s*\}\)/
       const durationCall = /buildManagementFirmwareBundle\(\{\s*costumes\s*,\s*blocks\s*,\s*showDurationMs:\s*Math\.round\(duration\s*\*\s*1000\)\s*\}\)/
+      const durationCallText = 'buildManagementFirmwareBundle({ costumes, blocks, showDurationMs: Math.round(duration * 1000) })'
 
-      if (plainCall.test(out)) {
-        out = out.replace(
-          plainCall,
-          'buildManagementFirmwareBundle({ costumes, blocks, showDurationMs: Math.round(duration * 1000) })'
-        )
-      } else if (!durationCall.test(out)) {
-        throw new Error('firmware duration bridge: bundle call not found or has unexpected shape')
+      if (plainCall.test(out)) out = out.replace(plainCall, durationCallText)
+      else if (!durationCall.test(out)) throw new Error('firmware duration bridge: bundle call not found or has unexpected shape')
+
+      // Anchor directly to the firmware generator call, then patch only the nearest
+      // dependency list that closes that useMemo. This is robust to helper renames or
+      // extra transforms inserted between firmwareBundle and firmwareItems.
+      const callIndex = out.indexOf(durationCallText)
+      if (callIndex < 0) throw new Error('firmware duration bridge: normalized bundle call missing')
+
+      const searchEnd = Math.min(out.length, callIndex + 5000)
+      const tail = out.slice(callIndex, searchEnd)
+      const oldDeps = '[costumes, blocks])'
+      const newDeps = '[costumes, blocks, duration])'
+      const oldDepIndex = tail.indexOf(oldDeps)
+      const newDepIndex = tail.indexOf(newDeps)
+
+      if (oldDepIndex >= 0 && (newDepIndex < 0 || oldDepIndex < newDepIndex)) {
+        const absolute = callIndex + oldDepIndex
+        out = out.slice(0, absolute) + newDeps + out.slice(absolute + oldDeps.length)
+      } else if (newDepIndex < 0) {
+        throw new Error('firmware duration bridge: nearest firmware useMemo dependency list not found')
       }
 
-      // Update the dependency list belonging to firmwareBundle. Restrict the search to
-      // the region before firmwareItems so unrelated useMemo hooks are never changed.
-      const firmwareStart = out.indexOf('  const firmwareBundle = useMemo(() => {')
-      const firmwareItemsStart = out.indexOf('  const firmwareItems = useMemo', firmwareStart)
-      if (firmwareStart < 0 || firmwareItemsStart < 0) {
-        throw new Error('firmware duration bridge: firmwareBundle region not found')
-      }
-
-      const before = out.slice(0, firmwareStart)
-      let region = out.slice(firmwareStart, firmwareItemsStart)
-      const after = out.slice(firmwareItemsStart)
-
-      if (region.includes('  }, [costumes, blocks])')) {
-        region = region.replace('  }, [costumes, blocks])', '  }, [costumes, blocks, duration])')
-      } else if (!region.includes('  }, [costumes, blocks, duration])')) {
-        throw new Error('firmware duration bridge: firmwareBundle dependency list not found')
-      }
-
-      out = before + region + after
-
-      if (!durationCall.test(out) || !region.includes('[costumes, blocks, duration]')) {
+      // Re-read after patch and verify both the call and its nearby dependency.
+      const verifyCallIndex = out.indexOf(durationCallText)
+      const verifyTail = out.slice(verifyCallIndex, Math.min(out.length, verifyCallIndex + 5000))
+      if (verifyCallIndex < 0 || !verifyTail.includes(newDeps)) {
         throw new Error('firmware duration bridge: final verification failed')
       }
 
