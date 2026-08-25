@@ -21,6 +21,20 @@ export function managementSerialSafetyPlugin() {
       const sendSafe = `  const sendSerialLine = async (line) => {\n    const writer = serialWriterRef.current\n    if (!writer || !masterConnected) return false\n    const handshakeOnly = /^\\s*(HELLO|PING)\\b/i.test(String(line || ''))\n    if (!masterReadyRef.current && !handshakeOnly) return false`
       if (out.includes(sendAnchor)) out = out.replace(sendAnchor, sendSafe)
 
+      // Freeze the management playhead from the media element's real clock before
+      // pausing. React currentTime is updated by requestAnimationFrame and may trail
+      // the actual audio/video clock by one or more frames under RF monitor load.
+      // Reusing that stale value on resume made PREVIEW/B-LIVE restart slightly behind.
+      const pauseAnchor = `  const pause = (notifyMaster = true) => {\n    pauseMediaOnly()\n    setPlaying(false)\n    if (notifyMaster && masterConnected) sendSerialLine('PREVIEW_PAUSE')\n  }`
+      const pauseExact = `  const pause = (notifyMaster = true) => {\n    const mediaEl = getMediaEl()\n    const exactTime = mediaEl && Number.isFinite(mediaEl.currentTime)\n      ? clamp(mediaEl.currentTime, 0, duration)\n      : currentTime\n    pauseMediaOnly()\n    if (mediaEl && Number.isFinite(exactTime)) setCurrentTime(exactTime)\n    setPlaying(false)\n    if (notifyMaster && masterConnected) sendSerialLine('PREVIEW_PAUSE')\n  }`
+      if (out.includes(pauseAnchor)) out = out.replace(pauseAnchor, pauseExact)
+
+      // Use the media element's exact resume position for PREVIEW_PLAY instead of a
+      // possibly stale React render value. The media clock remains the source of truth.
+      const playAnchor = `        await el.play()\n        setPlaying(true)\n        if (masterConnected) sendSerialLine(\`PREVIEW_PLAY \${Math.round(currentTime * 1000)}\`)`
+      const playExact = `        const resumeTime = Number.isFinite(el.currentTime) ? clamp(el.currentTime, 0, duration) : currentTime\n        await el.play()\n        setPlaying(true)\n        if (masterConnected) sendSerialLine(\`PREVIEW_PLAY \${Math.round(resumeTime * 1000)}\`)`
+      if (out.includes(playAnchor)) out = out.replace(playAnchor, playExact)
+
       // Do not send PREVIEW_PAUSE on every pointermove while scrubbing. One pause
       // at scrub start is enough; SEEK is already rate-limited separately.
       out = out.replace(
