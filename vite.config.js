@@ -42,8 +42,10 @@ import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetr
 import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
 import { managementAutonomousHandoffPlugin } from './scripts/managementAutonomousHandoffPlugin.js'
 import { managementAutonomousV062Plugin } from './scripts/managementAutonomousV062Plugin.js'
+import { managementAutonomousV063Plugin } from './scripts/managementAutonomousV063Plugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
+import { managementStableClockV063Plugin } from './scripts/managementStableClockV063Plugin.js'
 import { managementFirmwareSequenceDurationPlugin } from './scripts/managementFirmwareSequenceDurationPlugin.js'
 import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
 import { managementFirmwareDurationBridgePlugin } from './scripts/managementFirmwareDurationBridgePlugin.js'
@@ -102,8 +104,10 @@ export default defineConfig({
     managementRehearsalUiPlugin(),
     managementAutonomousHandoffPlugin(),
     managementAutonomousV062Plugin(),
+    managementAutonomousV063Plugin(),
     managementFirmwareHardenPlugin(),
     managementAutonomousFirmwareV062Plugin(),
+    managementStableClockV063Plugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
