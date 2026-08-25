@@ -11,17 +11,12 @@ export function managementSafetyV065FinalGuardPlugin() {
       let out = code
 
       // Firmware bundle must be rebuilt when sequence duration changes, even if the
-      // costume/block array identities happen to remain unchanged.
-      const fwStart = out.indexOf('  const firmwareBundle = useMemo(() => {')
-      const fwEnd = out.indexOf('\n  const firmwareItems = useMemo', fwStart)
-      if (fwStart < 0 || fwEnd < 0) throw new Error('v0.6.5 final guard: firmwareBundle bounds missing')
-      let fwRegion = out.slice(fwStart, fwEnd)
-      if (fwRegion.includes('  }, [costumes, blocks])')) {
-        fwRegion = fwRegion.replace('  }, [costumes, blocks])', '  }, [costumes, blocks, duration])')
-        out = out.slice(0, fwStart) + fwRegion + out.slice(fwEnd)
-      } else if (!fwRegion.includes('[costumes, blocks, duration]')) {
-        throw new Error('v0.6.5 final guard: firmwareBundle duration dependency missing')
-      }
+      // costume/block array identities happen to remain unchanged. Target only the
+      // firmwareBundle -> firmwareItems boundary to avoid touching unrelated useMemo blocks.
+      const bundleDependencyAnchor = '  }, [costumes, blocks])\n  const firmwareItems = useMemo'
+      const bundleDependencyFixed = '  }, [costumes, blocks, duration])\n  const firmwareItems = useMemo'
+      if (out.includes(bundleDependencyAnchor)) out = out.replace(bundleDependencyAnchor, bundleDependencyFixed)
+      else if (!out.includes(bundleDependencyFixed)) throw new Error('v0.6.5 final guard: firmwareBundle duration dependency missing')
 
       // This runs after the optimized frame-scrub transform, so LIVE protection cannot
       // be overwritten by a later scrub implementation.
