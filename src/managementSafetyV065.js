@@ -9,12 +9,12 @@ export function applySafetyMasterV065(source, bundleHash = 0) {
   let code = source
   const bundleHex = hashHex(bundleHash)
 
-  code = replaceRequired(
-    code,
-    '#define SERIAL_BAUD 115200\n#define A_CLOCK_RESERVE_MS 100UL',
-    `#define SERIAL_BAUD 115200\n#define A_CLOCK_RESERVE_MS 100UL\n#define FIRMWARE_BUNDLE_HASH 0x${bundleHex}UL`,
-    'master bundle define'
-  )
+  const oldMasterDefines = `#define SERIAL_BAUD 115200
+#define A_CLOCK_RESERVE_MS 100UL`
+  const newMasterDefines = `#define SERIAL_BAUD 115200
+#define A_CLOCK_RESERVE_MS 100UL
+#define FIRMWARE_BUNDLE_HASH 0x${bundleHex}UL`
+  code = replaceRequired(code, oldMasterDefines, newMasterDefines, 'master bundle define')
 
   code = code.replaceAll(
     'LSM_READY LSM-B1 AB_DUAL V064',
