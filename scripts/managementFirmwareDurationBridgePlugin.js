@@ -1,6 +1,7 @@
 export function managementFirmwareDurationBridgePlugin() {
   return {
     name: 'management-firmware-duration-bridge',
+    enforce: 'pre',
     transform(code, id) {
       if (!id.includes('src/ManagementApp.jsx')) return null
       let out = code
@@ -12,9 +13,6 @@ export function managementFirmwareDurationBridgePlugin() {
       if (plainCall.test(out)) out = out.replace(plainCall, durationCallText)
       else if (!durationCall.test(out)) throw new Error('firmware duration bridge: bundle call not found or has unexpected shape')
 
-      // Anchor directly to the firmware generator call, then patch only the nearest
-      // dependency list that closes that useMemo. This is robust to helper renames or
-      // extra transforms inserted between firmwareBundle and firmwareItems.
       const callIndex = out.indexOf(durationCallText)
       if (callIndex < 0) throw new Error('firmware duration bridge: normalized bundle call missing')
 
@@ -32,7 +30,6 @@ export function managementFirmwareDurationBridgePlugin() {
         throw new Error('firmware duration bridge: nearest firmware useMemo dependency list not found')
       }
 
-      // Re-read after patch and verify both the call and its nearby dependency.
       const verifyCallIndex = out.indexOf(durationCallText)
       const verifyTail = out.slice(verifyCallIndex, Math.min(out.length, verifyCallIndex + 5000))
       if (verifyCallIndex < 0 || !verifyTail.includes(newDeps)) {
