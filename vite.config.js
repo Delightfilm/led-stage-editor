@@ -43,6 +43,7 @@ import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlug
 import { managementAutonomousHandoffPlugin } from './scripts/managementAutonomousHandoffPlugin.js'
 import { managementAutonomousV062Plugin } from './scripts/managementAutonomousV062Plugin.js'
 import { managementAutonomousV063Plugin } from './scripts/managementAutonomousV063Plugin.js'
+import { managementV063FailClosedPlugin } from './scripts/managementV063FailClosedPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
 import { managementStableClockV063Plugin } from './scripts/managementStableClockV063Plugin.js'
@@ -108,6 +109,7 @@ export default defineConfig({
     managementFirmwareHardenPlugin(),
     managementAutonomousFirmwareV062Plugin(),
     managementStableClockV063Plugin(),
+    managementV063FailClosedPlugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
