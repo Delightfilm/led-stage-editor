@@ -6,6 +6,17 @@ const replaceRequired = (source, from, to, label) => {
 export function applyV063FailClosedMaster(source) {
   let code = source
 
+  code = replaceRequired(
+    code,
+    `bool aClockPending = false;
+uint16_t aClockPendingSeq = 0;`,
+    `bool aClockPending = false;
+bool aClockStartedReportPending = false;
+uint32_t aClockStartedReportOffsetMs = 0;
+uint16_t aClockPendingSeq = 0;`,
+    'reliable A started report state'
+  )
+
   const oldPreflight = `  // Stability first: verify/sync every unique RX before choosing the epoch. Any ACK
   // retry variation happens here, before the scheduled clock exists, so it cannot
   // move the final GO time relative to the media timeline.
@@ -42,6 +53,55 @@ export function applyV063FailClosedMaster(source) {
       return;
     }`,
     'explicit schedule denial'
+  )
+
+  code = replaceRequired(
+    code,
+    `  if (pcHandshake && Serial.availableForWrite() >= 24) {
+    Serial.print("A_LIVE_STARTED " );
+    Serial.print(liveOffsetMs);
+    Serial.print(' ');
+    Serial.println(A_CLOCK_RESERVE_MS);
+  }
+}`,
+    `  // Never block the common GO epoch on USB, but never silently lose the result
+  // either. Queue the report and flush it from the normal loop when TX has room.
+  aClockStartedReportOffsetMs = liveOffsetMs;
+  aClockStartedReportPending = true;
+}
+
+void flushAClockStartedReport() {
+  if (!aClockStartedReportPending || !pcHandshake) return;
+  if (Serial.availableForWrite() < 48) return;
+  Serial.print("A_LIVE_STARTED " );
+  Serial.print(aClockStartedReportOffsetMs);
+  Serial.print(' ');
+  Serial.println(A_CLOCK_RESERVE_MS);
+  aClockStartedReportPending = false;
+}`,
+    'reliable A started report queue'
+  )
+
+  code = replaceRequired(
+    code,
+    `  commitStableAIfDue();
+
+  // HARD_END_GUARD:`,
+    `  commitStableAIfDue();
+  flushAClockStartedReport();
+
+  // HARD_END_GUARD:`,
+    'A started report loop flush'
+  )
+
+  // If a terminal action wins before the report is flushed, never emit a stale
+  // "started" event after the show has already been stopped.
+  code = code.replaceAll(
+    `  aClockPending = false;
+  cueSeq++;`,
+    `  aClockPending = false;
+  aClockStartedReportPending = false;
+  cueSeq++;`
   )
 
   return code
