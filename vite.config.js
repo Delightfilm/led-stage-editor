@@ -52,6 +52,7 @@ import { managementV067FirmwareGeneratorFixPlugin } from './scripts/managementV0
 import { managementV068FirmwareGeneratorFixPlugin } from './scripts/managementV068FirmwareGeneratorFixPlugin.js'
 import { managementV069MasterSramPlugin } from './scripts/managementV069MasterSramPlugin.js'
 import { managementV0610AClockDiagnosticsPlugin } from './scripts/managementV0610AClockDiagnosticsPlugin.js'
+import { managementV0611PerformanceLockPlugin } from './scripts/managementV0611PerformanceLockPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
 import { managementStableClockV063Plugin } from './scripts/managementStableClockV063Plugin.js'
@@ -128,6 +129,7 @@ export default defineConfig({
     managementV068FirmwareGeneratorFixPlugin(),
     managementV069MasterSramPlugin(),
     managementV0610AClockDiagnosticsPlugin(),
+    managementV0611PerformanceLockPlugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
