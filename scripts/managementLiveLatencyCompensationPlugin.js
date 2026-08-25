@@ -3,6 +3,8 @@ const replaceRequired = (source, from, to, label) => {
   return source.replace(from, to)
 }
 
+const B_LIVE_EARLY_CORRECTION_MS = 300
+
 export function managementLiveLatencyCompensationPlugin() {
   return {
     name: 'management-live-latency-compensation',
@@ -11,8 +13,9 @@ export function managementLiveLatencyCompensationPlugin() {
       if (!id.includes('src/ManagementApp.jsx')) return null
       let out = code
 
-      // Freeze the configured output-latency compensation for the lifetime of one LIVE.
-      // B -> A autonomous handoff must keep the same value until the show naturally ends.
+      // B LIVE has a measured ~300 ms early visual start relative to the program audio.
+      // Keep this correction separate from the general DELAY / START LEAD control so
+      // Preview and standalone A timing are not disturbed by a B-only calibration.
       const refAnchor = '  const liveCompleteSentRef = useRef(false)'
       if (!out.includes('const bLiveDelayRef = useRef(0)')) {
         out = replaceRequired(
@@ -23,17 +26,15 @@ export function managementLiveLatencyCompensationPlugin() {
         )
       }
 
-      // LIVE_START_NOW deliberately bypasses the MASTER start lead. Compensate on the
-      // transmitted timeline position instead, so mid-show rehearsal starts remain
-      // unrestricted by PREVIEW_SAFE_LIMIT while the RX timeline trails the browser
-      // media clock by exactly the configured output delay.
+      // LIVE_START_NOW at (offset - correction) means the RX timeline is intentionally
+      // 300 ms behind the browser clock at GO. Therefore a cue located at the browser's
+      // current position is reached 300 ms later, correcting the observed early LED start.
       //
-      // For the first few milliseconds where offset < delay, a negative timeline is
-      // impossible. In that narrow case use the existing delayed LIVE_START path so
-      // MASTER schedules timeline 0 in the future by the remaining compensation time.
+      // Near timeline zero a negative offset is impossible, so use MASTER's existing
+      // scheduled LIVE_START path for the remaining lead instead.
       const oldSend = '    const sent = await sendSerialLine(`LIVE_START_NOW ${offsetMs}`)'
       const newSend = [
-        "    const compensationMs = Math.max(0, Math.min(DELAY_HARD_MAX, Math.round(Number(effectiveDelay) || 0)))",
+        `    const compensationMs = ${B_LIVE_EARLY_CORRECTION_MS}`,
         "    bLiveDelayRef.current = compensationMs",
         "    let sent = false",
         "    if (compensationMs > offsetMs) {",
@@ -47,8 +48,8 @@ export function managementLiveLatencyCompensationPlugin() {
       out = replaceRequired(out, oldSend, newSend, 'B LIVE compensated start')
 
       // The immediate currentTime-based completion watchdog is only valid with zero
-      // output compensation. With compensation active, MASTER intentionally reaches
-      // SHOW_DURATION_MS later than the browser media element does.
+      // correction. With B correction active MASTER intentionally reaches SHOW_DURATION_MS
+      // later than the browser media element.
       const watchdogAnchor = '    if (!showEndMs || Math.round(currentTime * 1000) + 20 < showEndMs) return'
       out = replaceRequired(
         out,
@@ -57,9 +58,7 @@ export function managementLiveLatencyCompensationPlugin() {
         'early completion watchdog'
       )
 
-      // Keep the timer-based backup after the compensated MASTER end point. MASTER is
-      // still authoritative and normally finishes by itself; this timer is only a USB
-      // backup and therefore must never terminate a compensated show early.
+      // Keep the timer-based USB backup after the corrected MASTER end point.
       const remainingAnchor = '    const remainingMs = Math.max(0, showEndMs - positionMs)'
       out = replaceRequired(
         out,
@@ -68,8 +67,8 @@ export function managementLiveLatencyCompensationPlugin() {
         'completion timer compensation'
       )
 
-      // Clear the frozen compensation only after LIVE really leaves the live state.
-      // A B_LIVE -> A_LIVE handoff stays stageLive=true, so its compensation survives.
+      // Clear the frozen B correction only after LIVE really leaves the live state.
+      // A B_LIVE -> A_LIVE autonomous handoff keeps stageLive=true, so correction survives.
       const inactiveAnchor = [
         "    if (!stageLive) {",
         "      liveCompleteSentRef.current = false",
@@ -85,12 +84,11 @@ export function managementLiveLatencyCompensationPlugin() {
       ].join('\n')
       out = replaceRequired(out, inactiveAnchor, inactiveReplacement, 'live delay reset')
 
-      // Make the applied correction visible during testing without changing controls.
       const toastAnchor = "    showToast(`${rehearsalMode ? '연습실' : 'B'} LIVE 즉시 GO · ${fmtTime(offsetMs / 1000)}`)"
       out = replaceRequired(
         out,
         toastAnchor,
-        "    showToast(`${rehearsalMode ? '연습실' : 'B'} LIVE GO · ${fmtTime(offsetMs / 1000)} · 출력보정 ${compensationMs}ms`)",
+        "    showToast(`${rehearsalMode ? '연습실' : 'B'} LIVE GO · ${fmtTime(offsetMs / 1000)} · 300ms 후행 보정`)",
         'compensation toast'
       )
 
