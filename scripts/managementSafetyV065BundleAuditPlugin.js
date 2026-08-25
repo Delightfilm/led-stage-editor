@@ -8,7 +8,10 @@ export function managementSafetyV065BundleAuditPlugin() {
         .join('\n')
 
       const required = [
-        ['WEB v0.6.9', 'visible web version'],
+        ['WEB v0.6.10', 'visible web version'],
+        ['A CLOCK ·', 'persistent A CLOCK diagnostic badge'],
+        ['MASTER SCHEDULED', 'A CLOCK scheduled acknowledgement visibility'],
+        ['FAILED · USB WRITE', 'A CLOCK local-playback fail clarity'],
         ['MASTER SRAM v0.6.9', 'MASTER flash-string optimizer'],
         ['unoptimized static Serial/LCD print string remains', 'MASTER SRAM leftover-string guard'],
         ['requestStart A/B split core', 'robust autonomous firmware generator anchor'],
@@ -32,12 +35,12 @@ export function managementSafetyV065BundleAuditPlugin() {
 
       const missing = required.filter(([needle]) => !code.includes(needle))
       if (missing.length) {
-        throw new Error(`v0.6.9 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
+        throw new Error(`v0.6.10 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
       }
 
       // Runtime transform helpers intentionally retain older protocol strings as
-      // search anchors. Positive marker checks verify the generator compatibility
-      // shims, v0.6.5 safety layers, and v0.6.9 SRAM optimizer in production.
+      // search anchors. Positive marker checks verify the generator compatibility,
+      // v0.6.5 safety layers, v0.6.9 SRAM optimization, and v0.6.10 A diagnostics.
     },
   }
 }
