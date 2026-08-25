@@ -10,13 +10,8 @@ export function managementSafetyV065FinalGuardPlugin() {
       if (!id.includes('src/ManagementApp.jsx')) return null
       let out = code
 
-      // Firmware bundle must be rebuilt when sequence duration changes, even if the
-      // costume/block array identities happen to remain unchanged. Target only the
-      // firmwareBundle -> firmwareItems boundary to avoid touching unrelated useMemo blocks.
-      const bundleDependencyAnchor = '  }, [costumes, blocks])\n  const firmwareItems = useMemo'
-      const bundleDependencyFixed = '  }, [costumes, blocks, duration])\n  const firmwareItems = useMemo'
-      if (out.includes(bundleDependencyAnchor)) out = out.replace(bundleDependencyAnchor, bundleDependencyFixed)
-      else if (!out.includes(bundleDependencyFixed)) throw new Error('v0.6.5 final guard: firmwareBundle duration dependency missing')
+      // Duration/BUNDLE consistency is owned and verified by
+      // managementFirmwareDurationBridgePlugin. Do not duplicate that transform here.
 
       // This runs after the optimized frame-scrub transform, so LIVE protection cannot
       // be overwritten by a later scrub implementation.
