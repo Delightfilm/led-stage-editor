@@ -44,6 +44,7 @@ import { managementAutonomousHandoffPlugin } from './scripts/managementAutonomou
 import { managementAutonomousV062Plugin } from './scripts/managementAutonomousV062Plugin.js'
 import { managementAutonomousV063Plugin } from './scripts/managementAutonomousV063Plugin.js'
 import { managementV063FailClosedPlugin } from './scripts/managementV063FailClosedPlugin.js'
+import { managementResilientJoinV064Plugin } from './scripts/managementResilientJoinV064Plugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
 import { managementStableClockV063Plugin } from './scripts/managementStableClockV063Plugin.js'
@@ -110,6 +111,7 @@ export default defineConfig({
     managementAutonomousFirmwareV062Plugin(),
     managementStableClockV063Plugin(),
     managementV063FailClosedPlugin(),
+    managementResilientJoinV064Plugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
