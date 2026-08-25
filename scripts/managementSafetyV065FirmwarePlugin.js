@@ -14,9 +14,11 @@ export function managementSafetyV065FirmwarePlugin() {
       const v064Import = 'import { applyResilientJoinMasterV064, applyResilientJoinReceiverV064 } from "./managementResilientJoinV064.js";'
       const v065Import = 'import { applySafetyMasterV065, applySafetyReceiverV065 } from "./managementSafetyV065.js";'
       const ackImport = 'import { applyAckFreshnessReceiverV065 } from "./managementAckFreshnessV065.js";'
+      const scheduleTelemetryImport = 'import { applyScheduleTelemetryReceiverV065 } from "./managementScheduleTelemetryV065.js";'
       if (!out.includes(v064Import)) throw new Error('v0.6.5 firmware: v0.6.4 import missing')
       if (!out.includes(v065Import)) out = out.replace(v064Import, `${v064Import}\n${v065Import}`)
       if (!out.includes(ackImport)) out = out.replace(v065Import, `${v065Import}\n${ackImport}`)
+      if (!out.includes(scheduleTelemetryImport)) out = out.replace(ackImport, `${ackImport}\n${scheduleTelemetryImport}`)
 
       if (!out.includes('const hashBundleV065 =')) {
         const anchor = 'export function buildManagementFirmwareBundle'
@@ -74,14 +76,14 @@ export function managementSafetyV065FirmwarePlugin() {
       if (!out.includes(`    code: ${rxExpr}, `)) throw new Error('v0.6.5 firmware: v0.6.4 RX expression missing')
       out = out.replace(
         `    code: ${rxExpr}, `,
-        `    code: applyAckFreshnessReceiverV065(applySafetyReceiverV065(${rxExpr})), `
+        `    code: applyScheduleTelemetryReceiverV065(applyAckFreshnessReceiverV065(applySafetyReceiverV065(${rxExpr}))), `
       )
 
       const hashAnchor = '  feed("mgmt-resilient-join-v064");'
       out = replaceRequired(
         out,
         hashAnchor,
-        `${hashAnchor}\n  feed("mgmt-safety-v065");\n  feed("mgmt-ack-freshness-v065");`,
+        `${hashAnchor}\n  feed("mgmt-safety-v065");\n  feed("mgmt-ack-freshness-v065");\n  feed("mgmt-schedule-telemetry-v065");`,
         'receiver hash marker'
       )
 
