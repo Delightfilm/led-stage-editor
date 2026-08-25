@@ -48,6 +48,7 @@ import { managementResilientJoinV064Plugin } from './scripts/managementResilient
 import { managementSafetyV065FirmwarePlugin } from './scripts/managementSafetyV065FirmwarePlugin.js'
 import { managementSafetyV065WebPlugin } from './scripts/managementSafetyV065WebPlugin.js'
 import { managementV066FirmwareGeneratorFixPlugin } from './scripts/managementV066FirmwareGeneratorFixPlugin.js'
+import { managementV067FirmwareGeneratorFixPlugin } from './scripts/managementV067FirmwareGeneratorFixPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
 import { managementStableClockV063Plugin } from './scripts/managementStableClockV063Plugin.js'
@@ -120,6 +121,7 @@ export default defineConfig({
     managementSafetyV065FirmwarePlugin(),
     managementSafetyV065WebPlugin(),
     managementV066FirmwareGeneratorFixPlugin(),
+    managementV067FirmwareGeneratorFixPlugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
