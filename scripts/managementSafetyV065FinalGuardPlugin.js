@@ -13,17 +13,16 @@ export function managementSafetyV065FinalGuardPlugin() {
       // Duration/BUNDLE consistency is owned and verified by
       // managementFirmwareDurationBridgePlugin. Do not duplicate that transform here.
 
-      // This runs after the optimized frame-scrub transform, so LIVE protection cannot
-      // be overwritten by a later scrub implementation.
-      out = replaceRequired(
-        out,
-        `  const startScrub = (event) => {
-    if (event.button !== 0) return`,
-        `  const startScrub = (event) => {
-    if (stageLive || liveUncertainRef.current) { showToast('LIVE 안전 잠금 · 타임라인 이동을 막았습니다.'); return }
-    if (event.button !== 0) return`,
-        'final scrub lock'
-      )
+      // This runs after the optimized frame-scrub transform. Inject the guard directly
+      // after the function header instead of depending on the implementation's next line.
+      const scrubHeader = '  const startScrub = (event) => {'
+      const scrubGuard = "    if (stageLive || liveUncertainRef.current) { showToast('LIVE 안전 잠금 · 타임라인 이동을 막았습니다.'); return }"
+      const scrubIndex = out.indexOf(scrubHeader)
+      if (scrubIndex < 0) throw new Error('v0.6.5 final guard: startScrub function not found')
+      const scrubWindow = out.slice(scrubIndex, Math.min(out.length, scrubIndex + 500))
+      if (!scrubWindow.includes(scrubGuard)) {
+        out = out.slice(0, scrubIndex + scrubHeader.length) + '\n' + scrubGuard + out.slice(scrubIndex + scrubHeader.length)
+      }
 
       // SET_DELAY and LIVE_START are one safety transaction. Never start with an old
       // lead value if the SET_DELAY write itself failed.
