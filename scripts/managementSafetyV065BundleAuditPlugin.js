@@ -8,7 +8,8 @@ export function managementSafetyV065BundleAuditPlugin() {
         .join('\n')
 
       const required = [
-        ['WEB v0.6.5', 'visible web version'],
+        ['WEB v0.6.6', 'visible web version'],
+        ['requestStart A/B split core', 'robust autonomous firmware generator anchor'],
         ['V065 BUNDLE', 'MASTER v0.6.5 bundle handshake'],
         ['FIRMWARE_BUNDLE_HASH', 'MASTER bundle hash define'],
         ['mgmt-ack-freshness-v065', 'RX ACK freshness hash marker'],
@@ -26,12 +27,12 @@ export function managementSafetyV065BundleAuditPlugin() {
 
       const missing = required.filter(([needle]) => !code.includes(needle))
       if (missing.length) {
-        throw new Error(`v0.6.5 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
+        throw new Error(`v0.6.6 bundle audit missing: ${missing.map(([, label]) => label).join(', ')}`)
       }
 
-      // Do not forbid old protocol strings globally here: runtime firmware transform
-      // helpers intentionally retain old strings as search anchors. Required-marker
-      // checks above verify that the final v0.6.5 safety layers are present.
+      // Runtime transform helpers intentionally retain older protocol strings as
+      // search anchors. Positive marker checks above verify the v0.6.6 generator fix
+      // plus the v0.6.5 firmware safety layers in the final production bundle.
     },
   }
 }
