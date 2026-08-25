@@ -85,7 +85,7 @@ export function managementSafetyV065Plugin() {
         out = replaceRequired(
           out,
           rxCall,
-          '    code: applySafetyReceiverV065(applyResilientJoinReceiverV064(applyV063FailClosedReceiver(applyStableAClockReceiverV063(hardenStageReceiverFirmware(buildNrf24ManagementReceiverSketch({ ...rx, showHash: receiverHashes[index] || 0 }))))), '
+          '    code: applySafetyReceiverV065(applyResilientJoinReceiverV064(applyV063FailClosedReceiver(applyStableAClockReceiverV063(hardenStageReceiverFirmware(buildNrf24ManagementReceiverSketch({ ...rx, showHash: receiverHashes[index] || 0 }))))))), ',
           'receiver v0.6.5 safety call'
         )
 
