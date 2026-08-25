@@ -70,8 +70,7 @@ export function managementRehearsalUiPlugin() {
         "    bArmedOffsetRef.current = goOffsetMs",
         "    setCurrentTime(clamp(goTime, 0, duration))",
         "",
-        "    // START LEAD is now purely user-controlled. OFF/0ms = true immediate timeline GO.",
-        "    // If enabled, use the normal LIVE_START path so MASTER applies exactly that lead.",
+        "    // START LEAD is purely user-controlled. OFF/0ms = immediate timeline GO.",
         "    const userLeadMs = delayEnabled ? Math.max(0, Math.round(Number(delayMs) || 0)) : 0",
         "    let sent = false",
         "    if (userLeadMs > 0) {",
@@ -102,8 +101,6 @@ export function managementRehearsalUiPlugin() {
           "    if (!rehearsalMode) { showToast('중간 강제종료는 연습실 모드에서만 사용할 수 있어요.'); return }",
           "    if (!stageLive) { showToast('현재 LIVE가 진행 중이 아니에요.'); return }",
           "    if (!masterProtocolReady) { showToast('MASTER 연결을 확인해 주세요.'); return }",
-          "    // Snapshot the exact media clock before stopping. This position must survive",
-          "    // the LIVE_FORCE_STOP round trip so the next B LIVE START does not jump backward.",
           "    const mediaEl = getMediaEl()",
           "    const holdTime = mediaEl && Number.isFinite(mediaEl.currentTime) ? clamp(mediaEl.currentTime, 0, duration) : currentTime",
           "    pause(false)",
@@ -173,6 +170,40 @@ export function managementRehearsalUiPlugin() {
         'disabled={!masterProtocolReady || !previewSafe || stageLive} onClick={armModeB}>B LIVE START @ {fmtTime(currentTime)}',
         'disabled={!masterProtocolReady || (!rehearsalMode && !previewSafe) || stageLive} onClick={armModeB}>B LIVE START @ {fmtTime(currentTime)}'
       )
+
+      const versionAnchor = '<div className="logoSub">B · LIVE IN CALIBRATION</div>'
+      if (out.includes(versionAnchor)) {
+        out = out.replace(versionAnchor, '<div className="logoSub">B · LIVE IN CALIBRATION <span style={{ marginLeft: 8, color: \'#5EE0FF\', fontWeight: 800 }}>WEB v0.6.1</span></div>')
+      }
+
+      const delaySwitchAnchor = '          <label className="switch">\n            <input type="checkbox" checked={delayEnabled} onChange={(e) => setDelayEnabled(e.target.checked)} />\n            <span />\n          </label>\n          <input className="delayRange"'
+      if (out.includes(delaySwitchAnchor)) {
+        out = out.replace(delaySwitchAnchor, [
+          '          <label className="switch">',
+          '            <input type="checkbox" checked={delayEnabled} onChange={(e) => setDelayEnabled(e.target.checked)} />',
+          '            <span />',
+          '          </label>',
+          '          <button',
+          '            className={`tbtn compact ${delayEnabled && delayMs === 300 ? \'connectedBtn\' : \'\'}`}',
+          '            onClick={() => {',
+          '              if (delayEnabled && delayMs === 300) {',
+          '                setDelayEnabled(false)',
+          "                showToast('START LEAD OFF')",
+          '              } else {',
+          '                setDelayMs(300)',
+          '                setDelayEnabled(true)',
+          "                showToast('START LEAD 300ms ON')",
+          '              }',
+          '            }}',
+          '            style={{ minWidth: 132, fontWeight: 800 }}',
+          '          >',
+          "            {delayEnabled && delayMs === 300 ? '300ms ON' : '300ms START LEAD'}",
+          '          </button>',
+          '          <input className="delayRange"',
+        ].join('\n'))
+      } else {
+        throw new Error('rehearsal ui: delay switch anchor not found')
+      }
 
       const earlyStopButton = "          <button className=\"tbtn compact\" disabled={stageMode !== 'B_LIVE' || !canAbortLive} onClick={requestStageStop} style={{ color: canAbortLive ? '#ff657a' : undefined }}>■ STOP BEFORE CUE</button>"
       if (!out.includes('>연습실 모드<')) {
