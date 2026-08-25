@@ -6,6 +6,7 @@ const replaceRequired = (source, from, to, label) => {
 export function managementSafetyV065FinalGuardPlugin() {
   return {
     name: 'management-safety-v065-final-guard',
+    enforce: 'pre',
     transform(code, id) {
       if (!id.includes('src/ManagementApp.jsx')) return null
       let out = code
@@ -13,8 +14,8 @@ export function managementSafetyV065FinalGuardPlugin() {
       // Duration/BUNDLE consistency is owned and verified by
       // managementFirmwareDurationBridgePlugin. Do not duplicate that transform here.
 
-      // This runs after the optimized frame-scrub transform. Inject the guard directly
-      // after the function header instead of depending on the implementation's next line.
+      // This runs after the optimized frame-scrub transform and before React JSX
+      // compilation. Inject the guard directly after the function header.
       const scrubHeader = '  const startScrub = (event) => {'
       const scrubGuard = "    if (stageLive || liveUncertainRef.current) { showToast('LIVE 안전 잠금 · 타임라인 이동을 막았습니다.'); return }"
       const scrubIndex = out.indexOf(scrubHeader)
