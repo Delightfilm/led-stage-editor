@@ -40,6 +40,7 @@ import { managementOneClickLivePlugin } from './scripts/managementOneClickLivePl
 import { managementSerialRecoveryPlugin } from './scripts/managementSerialRecoveryPlugin.js'
 import { managementTelemetryHeartbeatPlugin } from './scripts/managementTelemetryHeartbeatPlugin.js'
 import { managementRehearsalUiPlugin } from './scripts/managementRehearsalUiPlugin.js'
+import { managementAutonomousHandoffPlugin } from './scripts/managementAutonomousHandoffPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementFirmwareSequenceDurationPlugin } from './scripts/managementFirmwareSequenceDurationPlugin.js'
 import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
@@ -97,6 +98,7 @@ export default defineConfig({
     managementSerialRecoveryPlugin(),
     managementTelemetryHeartbeatPlugin(),
     managementRehearsalUiPlugin(),
+    managementAutonomousHandoffPlugin(),
     managementFirmwareHardenPlugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
