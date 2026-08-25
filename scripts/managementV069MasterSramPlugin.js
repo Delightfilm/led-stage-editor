@@ -16,10 +16,10 @@ export function managementV069MasterSramPlugin() {
         if (!out.includes(safetyImport)) throw new Error('v0.6.9 SRAM plugin: v0.6.5 safety import missing')
         if (!out.includes(sramImport)) out = out.replace(safetyImport, `${safetyImport}\n${sramImport}`)
 
-        const safetyCall = '  masterCode = applySafetyMasterV065(masterCode, bundleHash);'
+        const normalizedSafetyCall = '  masterCode = applySafetyMasterV065(normalizeSafetyMasterInputV067(masterCode), bundleHash);'
         const optimizedCall = '  masterCode = optimizeManagementMasterSramV069(masterCode);'
-        if (!out.includes(safetyCall)) throw new Error('v0.6.9 SRAM plugin: final MASTER safety call missing')
-        if (!out.includes(optimizedCall)) out = out.replace(safetyCall, `${safetyCall}\n${optimizedCall}`)
+        if (!out.includes(normalizedSafetyCall)) throw new Error('v0.6.9 SRAM plugin: normalized final MASTER safety call missing')
+        if (!out.includes(optimizedCall)) out = out.replace(normalizedSafetyCall, `${normalizedSafetyCall}\n${optimizedCall}`)
       }
 
       if (id.includes('src/ManagementApp.jsx')) {
