@@ -9,7 +9,17 @@ export function applyAutonomousAFirmwareV062(source) {
   // v0.6.6 generator hardening:
   // Do not match the entire requestStart() body. Later firmware layers legitimately
   // changed LIVE_STARTED telemetry, and an unrelated log-line change must never make
-  // MASTER/RX generation fail. Patch only the actual A/B start decision core.
+  // MASTER/RX generation fail. Normalize only the pieces later transforms depend on.
+  const oldRequestGuard = `void requestStart() {
+  // Once a LIVE show is running, neither D2 nor PC preview may interrupt it.
+  if (showPlaying) return;`
+  const newRequestGuard = `void requestStart() {
+  // Once a LIVE show is running, physical D2 never interrupts or restarts it.
+  if (showPlaying) return;`
+  if (!code.includes(newRequestGuard)) {
+    code = replaceRequired(code, oldRequestGuard, newRequestGuard, 'requestStart guard')
+  }
+
   const oldStartCore = `  const uint32_t offsetMs = (pcHandshake && bArmed) ? armedOffsetMs : 0;
   sendStartFromOffset(offsetMs);`
   const newStartCore = `  const bool useBStart = pcHandshake && bArmed;
@@ -20,7 +30,6 @@ export function applyAutonomousAFirmwareV062(source) {
   // - Standalone A D2 is always immediate (0 ms START LEAD).
   if (useBStart) sendStartFromOffset(offsetMs);
   else sendStartFromOffsetNow(0);`
-
   if (!code.includes(newStartCore)) {
     code = replaceRequired(code, oldStartCore, newStartCore, 'requestStart A/B split core')
   }
