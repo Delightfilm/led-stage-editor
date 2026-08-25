@@ -7,7 +7,7 @@ export function liveMonitorPlugin() {
       let out = code
 
       const state = "  const [masterLog, setMasterLog] = useState([])"
-      if (!out.includes('const [rxMon, setRxMon]')) out = out.replace(state, state + "\n  const [pingAlive, setPingAlive] = useState(false)\n  const [pingRtt, setPingRtt] = useState(null)\n  const [rxTelemetrySeen, setRxTelemetrySeen] = useState(false)\n  const [rxPulseId, setRxPulseId] = useState(null)\n  const [rxMon, setRxMon] = useState(() => Array.from({ length: 7 }, (_, i) => ({ id: i + 1, state: 'X', us: 0, age: null, retry: 0 })))")
+      if (!out.includes('const [rxMon, setRxMon]')) out = out.replace(state, state + "\n  const [pingAlive, setPingAlive] = useState(false)\n  const [pingRtt, setPingRtt] = useState(null)\n  const [rxTelemetrySeen, setRxTelemetrySeen] = useState(false)\n  const [rxMon, setRxMon] = useState(() => Array.from({ length: 7 }, (_, i) => ({ id: i + 1, state: 'X', us: 0, age: null, retry: 0 })))")
 
       const refs = "  const lastSerialSeekAtRef = useRef(0)"
       if (!out.includes('const pingSentRef')) out = out.replace(refs, refs + "\n  const pingSentRef = useRef(0)\n  const pongRef = useRef(0)")
@@ -15,12 +15,10 @@ export function liveMonitorPlugin() {
       const parser = "    if (!line) return\n    addMasterLog(line)"
       if (!out.includes("line.startsWith('RXMON ')")) out = out.replace(parser, [
         "    if (!line) return",
-        "    if (line.startsWith('RXP ') || line.startsWith('RXPULSE ')) {",
-        "      const now = performance.now(); pongRef.current = now; setPingAlive(true)",
-        "      const pulseId = Number(line.startsWith('RXP ') ? line.slice(4) : line.slice(8)) || null",
-        "      if (pulseId) setRxPulseId(pulseId)",
-        "      return",
-        "    }",
+        "    // RXP is intentionally ref-only. Updating React state for every receiver scan",
+        "    // caused the entire Management workspace to rerender about 10 times/sec on top",
+        "    // of the playback RAF, which could stall the Main Console and make RF LIVE look frozen.",
+        "    if (line.startsWith('RXP ') || line.startsWith('RXPULSE ')) { pongRef.current = performance.now(); return }",
         "    if (line.startsWith('RXMON ')) {",
         "      const now = performance.now(); pongRef.current = now; setPingAlive(true)",
         "      const rows = line.slice(6).split(',').map((v) => { const [id, state, us, age, retry] = v.split(':'); return { id: Number(id), state, us: Number(us) || 0, age: Number(age), retry: Number(retry) || 0 } })",
@@ -42,7 +40,7 @@ export function liveMonitorPlugin() {
         "  // PING transmission is owned by managementTelemetryHeartbeatPlugin. Keeping",
         "  // this effect health-only prevents two heartbeat loops from queueing writes.",
         "  useEffect(() => {",
-        "    if (!masterConnected) { setPingAlive(false); setPingRtt(null); setRxTelemetrySeen(false); setRxPulseId(null); pongRef.current = 0; return undefined }",
+        "    if (!masterConnected) { setPingAlive(false); setPingRtt(null); setRxTelemetrySeen(false); pongRef.current = 0; return undefined }",
         "    const healthTimer = window.setInterval(() => setPingAlive(pongRef.current > 0 && performance.now() - pongRef.current < 2500), 400)",
         "    return () => window.clearInterval(healthTimer)",
         "  }, [masterConnected])",
@@ -55,14 +53,14 @@ export function liveMonitorPlugin() {
       if (!out.includes('rxLiveRail') && out.includes(controlStart) && out.includes(timeline)) {
         out = out.replace(controlStart, [
           "        <section className=\"stageControlDock\">",
-          "          <aside className=\"rxLiveRail\" title=\"LIVE는 MASTER의 실제 RX PING pulse + RXMON/PONG 텔레메트리 기준 · RX ms는 nRF24 PING→ACK 왕복시간\">",
+          "          <aside className=\"rxLiveRail\" title=\"LIVE는 MASTER의 RXMON/PONG 텔레메트리 기준 · RX ms는 nRF24 PING→ACK 왕복시간\">",
           "            <div className=\"rxLiveRailHead\">",
           "              <b>RF LIVE</b>",
           "              <span className=\"rxPingState\" style={{color:pingAlive?'#62e7a2':'#ff657a'}}>● {pingAlive?'LIVE':'TIMEOUT'}</span>",
           "              <span className=\"rxUsbRtt\">{pingRtt==null?'RTT --':`${pingRtt.toFixed(1)} ms`}</span>",
           "            </div>",
           "            <div className=\"rxLiveRows\">",
-          "              {rxMon.slice(0,7).map((rx)=>{ const telemetryReady=masterConnected&&rxTelemetrySeen; const s=telemetryReady?rx.state:'W'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':s==='W'?'#8c98aa':'#ff657a'; return <div key={rx.id} className={`rxLiveRow${rxPulseId===rx.id?' rxPulse':''}`}><b>RX{rx.id}</b><span className=\"rxLiveState\" style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':s==='W'?'WAIT':'OFFLINE'}</span><span className=\"rxLiveMs\">{telemetryReady&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</span><span className=\"rxLiveRetry\">{telemetryReady?`R${rx.retry}`:'R-'}</span></div> })}",
+          "              {rxMon.slice(0,7).map((rx)=>{ const telemetryReady=masterConnected&&rxTelemetrySeen; const s=telemetryReady?rx.state:'W'; const c=s==='O'?'#62e7a2':(s==='V'||s==='?')?'#ffd84a':s==='W'?'#8c98aa':'#ff657a'; return <div key={rx.id} className=\"rxLiveRow\"><b>RX{rx.id}</b><span className=\"rxLiveState\" style={{color:c}}>{s==='O'?'ONLINE':s==='V'?'HASH V':s==='?'?'ACK ?':s==='W'?'WAIT':'OFFLINE'}</span><span className=\"rxLiveMs\">{telemetryReady&&rx.us?`${(rx.us/1000).toFixed(2)} ms`:'-- ms'}</span><span className=\"rxLiveRetry\">{telemetryReady?`R${rx.retry}`:'R-'}</span></div> })}",
           "            </div>",
           "          </aside>",
           "          <div className=\"stageControlStack\">",
