@@ -53,6 +53,7 @@ import { managementStableClockV063Plugin } from './scripts/managementStableClock
 import { managementFirmwareSequenceDurationPlugin } from './scripts/managementFirmwareSequenceDurationPlugin.js'
 import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin.js'
 import { managementFirmwareDurationBridgePlugin } from './scripts/managementFirmwareDurationBridgePlugin.js'
+import { managementSafetyV065FinalGuardPlugin } from './scripts/managementSafetyV065FinalGuardPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -119,6 +120,7 @@ export default defineConfig({
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
+    managementSafetyV065FinalGuardPlugin(),
     react(),
   ],
 })
