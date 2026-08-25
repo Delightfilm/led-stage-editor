@@ -12,7 +12,7 @@ export function managementSafetyV065BundleAuditPlugin() {
         ['requestStart A/B split core', 'robust autonomous firmware generator anchor'],
         ['v0.6.7 firmware: structural master STATUS ready/count tail not found', 'structural MASTER status normalization'],
         ['v0.6.8 receiver safety: structural stopPlayback anchor not found', 'structural RX stopPlayback normalization'],
-        ['v0.6.8 compatibility only: preserve the existing PREVIEW terminal reset', 'RX PREVIEW reset preservation'],
+        ['v0.6.8 receiver safety: v0.6.5 tombstone output not found', 'RX PREVIEW reset restore guard'],
         ['V065 BUNDLE', 'MASTER v0.6.5 bundle handshake'],
         ['FIRMWARE_BUNDLE_HASH', 'MASTER bundle hash define'],
         ['mgmt-ack-freshness-v065', 'RX ACK freshness hash marker'],
