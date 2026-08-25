@@ -32,6 +32,7 @@ import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { workspaceUiPolishPlugin } from './scripts/workspaceUiPolishPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
 import { managementFirmwarePanelPlugin } from './scripts/managementFirmwarePanelPlugin.js'
+import { managementEsp32FirmwarePanelPlugin } from './scripts/managementEsp32FirmwarePanelPlugin.js'
 import { managementABModePlugin } from './scripts/managementABModePlugin.js'
 import { managementFormationStagePlugin } from './scripts/managementFormationStagePlugin.js'
 import { liveMonitorPlugin } from './scripts/liveMonitorPlugin.js'
@@ -105,6 +106,7 @@ export default defineConfig({
     projectFootageVisibilityFixPlugin(),
     projectFootageDeletePlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
+    scopeManagementPlugin(managementEsp32FirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
     managementFormationStagePlugin(),
     scopeManagementPlugin(liveMonitorPlugin()),
