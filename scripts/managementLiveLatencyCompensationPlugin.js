@@ -92,6 +92,23 @@ export function managementLiveLatencyCompensationPlugin() {
         'compensation toast'
       )
 
+      // Make the active production calibration unmistakable before the user presses GO.
+      // This also gives us a visible build marker to rule out a stale browser tab/cache.
+      const liveButtonAnchor = '          <button className="tbtn compact" disabled={!masterProtocolReady || (!rehearsalMode && !previewSafe) || stageLive} onClick={armModeB}>B LIVE START @ {fmtTime(currentTime)}</button>'
+      out = replaceRequired(
+        out,
+        liveButtonAnchor,
+        '          <button className="tbtn compact" disabled={!masterProtocolReady || (!rehearsalMode && !previewSafe) || stageLive} onClick={armModeB}>B LIVE START · +300ms 후행 @ {fmtTime(currentTime)}</button>',
+        'visible B LIVE correction marker'
+      )
+
+      out = replaceRequired(
+        out,
+        '<div className="logoSub">B · LIVE IN CALIBRATION</div>',
+        '<div className="logoSub">B · LIVE SYNC FIX · +300ms LATE</div>',
+        'production sync marker'
+      )
+
       return { code: out, map: null }
     },
   }
