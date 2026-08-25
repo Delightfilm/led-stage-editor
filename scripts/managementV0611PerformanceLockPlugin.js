@@ -51,7 +51,7 @@ export function managementV0611PerformanceLockPlugin() {
       return
     }
 
-    // Critical invariant: no sendSerialLine(), no media seek, no pause/play, no new
+    // Critical invariant: no serial write, media seek, pause/play, or new
     // cueSeq/showStartMasterMs. The exact B epoch simply continues in every RX.
     window.__LSM_A_V063_REQUEST_BUSY__ = false
     bStartSentRef.current = false
