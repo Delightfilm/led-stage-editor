@@ -10,7 +10,7 @@ export function managementSafetyV065BundleAuditPlugin() {
       const required = [
         ['WEB v0.6.7', 'visible web version'],
         ['requestStart A/B split core', 'robust autonomous firmware generator anchor'],
-        ['STATUS_BUNDLE_V067_STRUCTURAL', 'structural MASTER status normalization'],
+        ['v0.6.7 firmware: structural master STATUS ready/count tail not found', 'structural MASTER status normalization'],
         ['V065 BUNDLE', 'MASTER v0.6.5 bundle handshake'],
         ['FIRMWARE_BUNDLE_HASH', 'MASTER bundle hash define'],
         ['mgmt-ack-freshness-v065', 'RX ACK freshness hash marker'],
