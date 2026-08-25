@@ -45,7 +45,7 @@ import { managementAutonomousV062Plugin } from './scripts/managementAutonomousV0
 import { managementAutonomousV063Plugin } from './scripts/managementAutonomousV063Plugin.js'
 import { managementV063FailClosedPlugin } from './scripts/managementV063FailClosedPlugin.js'
 import { managementResilientJoinV064Plugin } from './scripts/managementResilientJoinV064Plugin.js'
-import { managementSafetyV065Plugin } from './scripts/managementSafetyV065Plugin.js'
+import { managementSafetyV065ReleasePlugin } from './scripts/managementSafetyV065ReleasePlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
 import { managementStableClockV063Plugin } from './scripts/managementStableClockV063Plugin.js'
@@ -113,7 +113,7 @@ export default defineConfig({
     managementStableClockV063Plugin(),
     managementV063FailClosedPlugin(),
     managementResilientJoinV064Plugin(),
-    managementSafetyV065Plugin(),
+    managementSafetyV065ReleasePlugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
