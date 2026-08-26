@@ -19,15 +19,11 @@ export function managementEsp32RelayPinPlugin() {
         '  // Part 1 starts on GPIO16, matching the field-test wiring.',
         '  const ESP32_RELAY_GPIO = [16, 17, 18, 19, 23, 25, 26, 27]',
         '  if (rx.parts.length > ESP32_RELAY_GPIO.length) {',
-        "    throw new Error(`ESP32 RX${rx.receiverId}: max ${ESP32_RELAY_GPIO.length} relay outputs supported`) ",
+        "    throw new Error(`ESP32 RX${rx.receiverId}: max ${ESP32_RELAY_GPIO.length} relay outputs supported`)",
         '  }',
         '  const relayPins = rx.parts.map((_, index) => ESP32_RELAY_GPIO[index])',
       ].join('\n')
       out = replaceOnce(out, oldRelayPins, newRelayPins, 'receiver relay mapping')
-
-      const commentAnchor = ' * Relay outputs are ACTIVE HIGH by default.\\n */'
-      const commentReplacement = ' * Relay outputs are ACTIVE HIGH by default.\\n * ESP32 relay GPIOs are assigned independently: part1=GPIO16, part2=GPIO17, part3=GPIO18, part4=GPIO19, part5=GPIO23, part6=GPIO25, part7=GPIO26, part8=GPIO27.\\n */'
-      out = replaceOnce(out, commentAnchor, commentReplacement, 'generated firmware pin-map comment')
 
       out += '\n// ESP32_RELAY_GPIO_MAP_V1\n'
       return { code: out, map: null }
