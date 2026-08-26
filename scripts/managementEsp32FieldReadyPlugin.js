@@ -13,6 +13,15 @@ export function managementEsp32FieldReadyPlugin() {
         let out = code
         if (out.includes('ESP_NOW_FIELD_READY_V1')) return { code: out, map: null }
 
+        // managementEsp32Firmware.js emits C++ from a JS template literal. Preserve the
+        // C++ character escapes instead of letting JavaScript turn \n/\r into raw line breaks.
+        out = mustReplace(
+          out,
+          "    if (c == '\\n' || c == '\\r') {",
+          "    if (c == '\\\\n' || c == '\\\\r') {",
+          'MASTER serial C++ escape preservation',
+        )
+
         out = out.replaceAll('ESP-NOW v0.6.11 feature-parity', 'ESP-NOW v0.6.11 FIELD-READY')
 
         out = mustReplace(
