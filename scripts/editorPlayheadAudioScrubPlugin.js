@@ -1,6 +1,7 @@
 export function editorPlayheadAudioScrubPlugin() {
   return {
     name: 'editor-playhead-audio-scrub',
+    enforce: 'pre',
     transform(code, id) {
       if (!id.includes('src/App.jsx')) return null
       let out = code
@@ -13,15 +14,18 @@ export function editorPlayheadAudioScrubPlugin() {
       // Deep zoom can make timelineW hundreds of thousands of CSS pixels wide.
       // Keep the canvas backing store bounded and stretch only the CSS box so the
       // browser never hits its maximum canvas bitmap width (the white-block bug).
-      replaceStrict(
-        '    const W = timelineW, H = waveHeight;\n    cv.width = W; cv.height = H;',
+      const waveformCanvasPattern = /    const W = timelineW, H = (waveHeight|56);\n    cv\.width = W; cv\.height = H;/
+      const waveformMatch = out.match(waveformCanvasPattern)
+      if (!waveformMatch) throw new Error('editor scrub: bounded waveform canvas anchor not found')
+      const waveformHeightExpr = waveformMatch[1]
+      out = out.replace(
+        waveformCanvasPattern,
         [
-          '    const W = Math.max(600, Math.min(4096, Math.round(timelineW))), H = waveHeight;',
+          `    const W = Math.max(600, Math.min(4096, Math.round(timelineW))), H = ${waveformHeightExpr};`,
           '    cv.width = W; cv.height = H;',
           '    cv.style.width = timelineW + "px";',
           '    cv.style.height = H + "px";',
-        ].join('\n'),
-        'bounded waveform canvas'
+        ].join('\n')
       )
 
       // Preserve the pre-scrub playback state, then let the underlying media element
