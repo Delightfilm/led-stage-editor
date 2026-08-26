@@ -9,7 +9,7 @@ export function managementEsp32WebTestPlugin() {
     enforce: 'pre',
     transform(code, id) {
       if (!id.includes('src/ManagementApp.jsx')) return null
-      if (code.includes('ESP32_WEB_TEST_ISOLATED_V1')) return { code, map: null }
+      if (code.includes('ESP32_WEB_TEST_ISOLATED_V2')) return { code, map: null }
 
       let out = code
 
@@ -47,10 +47,11 @@ export function managementEsp32WebTestPlugin() {
         'disconnect reset',
       )
 
-      // This path deliberately bypasses the nRF24 B-LIVE previewSafe gate. It exists only
-      // after the MASTER identifies itself as ESP_NOW FIELD_READY, and uses the ESP32
-      // MASTER's LIVE_START_NOW command so 1:1 / 1:7 transport can be verified at any
-      // valid timeline position without changing nRF24 behavior.
+      // ESP32 follows the same PERFORMANCE model as the proven nRF24 path:
+      // 1) ESP32 LIVE START creates the B LIVE epoch.
+      // 2) The existing A 공연 LOCK then commits that exact running epoch without sending
+      //    any extra serial/RF command, seek, restart, or clock re-anchor.
+      // 3) Once A is locked, the ESP32 test force-stop is disabled as well.
       const helperAnchor = "  const requestStageStop = async () => {"
       const helpers = [
         "  const startEsp32FieldTest = async () => {",
@@ -69,18 +70,28 @@ export function managementEsp32WebTestPlugin() {
         "      return",
         "    }",
         "    pause(false)",
+        "    // Mark this as a B epoch before the MASTER replies LIVE_STARTED. The shared",
+        "    // LIVE_STARTED handler will therefore enter B_LIVE, enabling the same",
+        "    // no-command A PERFORMANCE LOCK used by nRF24.",
+        "    bLivePrimedRef.current = true",
         "    bStartSentRef.current = true",
         "    const sent = await sendSerialLine(`LIVE_START_NOW ${offsetMs}`)",
         "    if (!sent) {",
         "      bStartSentRef.current = false",
+        "      bLivePrimedRef.current = false",
         "      showToast('ESP32 LIVE START 전송 실패 · MASTER USB 연결을 확인해 주세요.')",
         "      return",
         "    }",
-        "    showToast(`ESP32 LIVE START 전송 · ${fmtTime(offsetMs / 1000)} · RX ACK 대기`)",
+        "    showToast(`ESP32 B LIVE START 전송 · ${fmtTime(offsetMs / 1000)} · RX ACK 대기`)",
         "  }",
         "",
         "  const stopEsp32FieldTest = async () => {",
         "    if (!masterProtocolReady || !esp32TransportReady) return",
+        "    if (stageMode === 'A_LIVE') {",
+        "      showToast('A 공연 LOCK 상태에서는 ESP32 FORCE STOP이 잠겨 있습니다.')",
+        "      return",
+        "    }",
+        "    if (stageMode !== 'B_LIVE') return",
         "    const sent = await sendSerialLine('LIVE_FORCE_STOP')",
         "    if (!sent) {",
         "      showToast('ESP32 FORCE STOP 전송 실패 · MASTER USB 연결을 확인해 주세요.')",
@@ -111,9 +122,9 @@ export function managementEsp32WebTestPlugin() {
       const isolatedButtons = [
         "{esp32TransportReady ? (",
         "  <>",
-        "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageLive} onClick={startEsp32FieldTest} style={{ color: '#62e7a2' }}>ESP32 LIVE START @ {fmtTime(currentTime)}</button>",
-        "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || !stageLive} onClick={stopEsp32FieldTest} style={{ color: stageLive ? '#ff657a' : undefined }}>ESP32 FORCE STOP</button>",
-        "    <span style={{ color: '#62e7a2', fontWeight: 800 }}>ESP-NOW TEST</span>",
+        "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageLive} onClick={startEsp32FieldTest} style={{ color: '#62e7a2' }}>ESP32 B LIVE START @ {fmtTime(currentTime)}</button>",
+        "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageMode !== 'B_LIVE'} onClick={stopEsp32FieldTest} style={{ color: stageMode === 'B_LIVE' ? '#ff657a' : undefined }}>ESP32 FORCE STOP</button>",
+        "    <span style={{ color: stageMode === 'A_LIVE' ? '#62e7a2' : '#62e7a2', fontWeight: 800 }}>{stageMode === 'A_LIVE' ? 'ESP-NOW · A LOCKED' : stageMode === 'B_LIVE' ? 'ESP-NOW · B LIVE' : 'ESP-NOW TEST'}</span>",
         "  </>",
         ") : (",
         originalBButton,
@@ -121,7 +132,7 @@ export function managementEsp32WebTestPlugin() {
       ].join('\n')
       out = out.slice(0, buttonStart) + isolatedButtons + out.slice(buttonEnd + '</button>'.length)
 
-      out += '\n// ESP32_WEB_TEST_ISOLATED_V1\n'
+      out += '\n// ESP32_WEB_TEST_ISOLATED_V2\n'
       return { code: out, map: null }
     },
   }
