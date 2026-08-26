@@ -98,19 +98,28 @@ export function managementEsp32WebTestPlugin() {
       ].join('\n')
       out = replaceOnce(out, helperAnchor, helpers + helperAnchor, 'ESP32 test helpers')
 
-      const originalBButton = "          <button className=\"tbtn compact\" disabled={!masterProtocolReady || !previewSafe || stageLive} onClick={armModeB}>① B LIVE START @ {fmtTime(currentTime)}</button>"
+      // Locate the final B-LIVE control structurally because the nRF24 production plugins
+      // intentionally relabel it across release gates. The exact original button is kept
+      // intact in the non-ESP32 branch.
+      const clickMarker = 'onClick={armModeB}'
+      const clickIndex = out.indexOf(clickMarker)
+      if (clickIndex < 0) throw new Error('ESP32 web test: B-LIVE click marker not found')
+      const buttonStart = out.lastIndexOf('<button', clickIndex)
+      const buttonEnd = out.indexOf('</button>', clickIndex)
+      if (buttonStart < 0 || buttonEnd < 0) throw new Error('ESP32 web test: B-LIVE button bounds not found')
+      const originalBButton = out.slice(buttonStart, buttonEnd + '</button>'.length)
       const isolatedButtons = [
-        "          {esp32TransportReady ? (",
-        "            <>",
-        "              <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageLive} onClick={startEsp32FieldTest} style={{ color: '#62e7a2' }}>ESP32 LIVE START @ {fmtTime(currentTime)}</button>",
-        "              <button className=\"tbtn compact\" disabled={!masterProtocolReady || !stageLive} onClick={stopEsp32FieldTest} style={{ color: stageLive ? '#ff657a' : undefined }}>ESP32 FORCE STOP</button>",
-        "              <span style={{ color: '#62e7a2', fontWeight: 800 }}>ESP-NOW TEST</span>",
-        "            </>",
-        "          ) : (",
+        "{esp32TransportReady ? (",
+        "  <>",
+        "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageLive} onClick={startEsp32FieldTest} style={{ color: '#62e7a2' }}>ESP32 LIVE START @ {fmtTime(currentTime)}</button>",
+        "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || !stageLive} onClick={stopEsp32FieldTest} style={{ color: stageLive ? '#ff657a' : undefined }}>ESP32 FORCE STOP</button>",
+        "    <span style={{ color: '#62e7a2', fontWeight: 800 }}>ESP-NOW TEST</span>",
+        "  </>",
+        ") : (",
         originalBButton,
-        "          )}",
+        ")}",
       ].join('\n')
-      out = replaceOnce(out, originalBButton, isolatedButtons, 'B-LIVE button isolation')
+      out = out.slice(0, buttonStart) + isolatedButtons + out.slice(buttonEnd + '</button>'.length)
 
       out += '\n// ESP32_WEB_TEST_ISOLATED_V1\n'
       return { code: out, map: null }
