@@ -56,6 +56,7 @@ import { managementV0610AClockDiagnosticsPlugin } from './scripts/managementV061
 import { managementV0611PerformanceLockPlugin } from './scripts/managementV0611PerformanceLockPlugin.js'
 import { managementEsp32LcdCompatPlugin } from './scripts/managementEsp32LcdCompatPlugin.js'
 import { managementEsp32FieldReadyPlugin } from './scripts/managementEsp32FieldReadyPlugin.js'
+import { managementEsp32WebTestPlugin } from './scripts/managementEsp32WebTestPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
 import { managementStableClockV063Plugin } from './scripts/managementStableClockV063Plugin.js'
@@ -137,6 +138,7 @@ export default defineConfig({
     managementV0611PerformanceLockPlugin(),
     managementEsp32LcdCompatPlugin(),
     managementEsp32FieldReadyPlugin(),
+    managementEsp32WebTestPlugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
