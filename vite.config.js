@@ -65,7 +65,6 @@ import { managementFrameScrubPlugin } from './scripts/managementFrameScrubPlugin
 import { managementFirmwareDurationBridgePlugin } from './scripts/managementFirmwareDurationBridgePlugin.js'
 import { managementSafetyV065FinalGuardPlugin } from './scripts/managementSafetyV065FinalGuardPlugin.js'
 import { managementSafetyV065BundleAuditPlugin } from './scripts/managementSafetyV065BundleAuditPlugin.js'
-import { editorPlayheadAudioScrubPlugin } from './scripts/editorPlayheadAudioScrubPlugin.js'
 
 const scopeManagementPlugin = (plugin) => ({
   ...plugin,
@@ -143,7 +142,6 @@ export default defineConfig({
     managementFrameScrubPlugin(),
     managementFirmwareDurationBridgePlugin(),
     managementSafetyV065FinalGuardPlugin(),
-    editorPlayheadAudioScrubPlugin(),
     react(),
     managementSafetyV065BundleAuditPlugin(),
   ],
