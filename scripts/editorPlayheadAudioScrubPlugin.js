@@ -103,11 +103,15 @@ export function editorPlayheadAudioScrubPlugin() {
         'playhead hit area css'
       )
 
-      replaceStrict(
-        'title="드래그 또는 마우스 휠로 좌우 이동 · +/− 키로 확대/축소 · C: 선택 블록 자르기 · SHIFT+C: 전체 트랙 자르기 · 블록 드래그 중 SHIFT: 자석처럼 스냅(다른 의상 블록에도 붙어요) · CTRL+Z: 되돌리기 · CTRL+SHIFT+Z: 다시 실행"',
-        'title="빨간 재생헤드/눈금자/파형 드래그: 시간 이동 + 스크럽 소리 · 빈 공간 드래그/마우스 휠: 이동 · +/−: 확대/축소 · C: 선택 블록 자르기 · SHIFT+C: 전체 트랙 자르기 · 블록 드래그 중 SHIFT: 스냅 · CTRL+Z: 되돌리기"',
-        'timeline help text'
-      )
+      // Other editor plugins may already rewrite the timeline tooltip. Keep this cosmetic
+      // text update best-effort so it never blocks a production build.
+      const oldHelp = 'title="드래그 또는 마우스 휠로 좌우 이동 · +/− 키로 확대/축소 · C: 선택 블록 자르기 · SHIFT+C: 전체 트랙 자르기 · 블록 드래그 중 SHIFT: 자석처럼 스냅(다른 의상 블록에도 붙어요) · CTRL+Z: 되돌리기 · CTRL+SHIFT+Z: 다시 실행"'
+      if (out.includes(oldHelp)) {
+        out = out.replace(
+          oldHelp,
+          'title="빨간 재생헤드/눈금자/파형 드래그: 시간 이동 + 스크럽 소리 · 빈 공간 드래그/마우스 휠: 이동 · +/−: 확대/축소 · C: 선택 블록 자르기 · SHIFT+C: 전체 트랙 자르기 · 블록 드래그 중 SHIFT: 스냅 · CTRL+Z: 되돌리기"'
+        )
+      }
 
       if (!out.includes('scrubMediaEl.play().catch') || !out.includes('Math.min(4096') || !out.includes('onMouseDown={startPlayheadScrub} title="재생헤드를 드래그해 이동')) {
         throw new Error('editor scrub: build assertions failed')
