@@ -10,12 +10,12 @@ export function editorFrameAudioScrubPlugin() {
         out = out.replace(from, to)
       }
 
-      // Keep the decoded audio in memory. The normal media element remains responsible
-      // for regular playback; this buffer is only used for frame-accurate scrub grains.
+      // Keep a dedicated decoded buffer for precise scrubbing. Regular playback still
+      // uses the existing <audio>/<video> element, so playback timing behavior is untouched.
       replaceStrict(
-        '  const videoElRef = useRef(null);',
+        '  const audioUrlRef = useRef(null);',
         [
-          '  const videoElRef = useRef(null);',
+          '  const audioUrlRef = useRef(null);',
           '  const scrubAudioBufferRef = useRef(null);',
           '  const scrubAudioContextRef = useRef(null);',
           '  const scrubVoiceRef = useRef(null);',
@@ -42,8 +42,6 @@ export function editorFrameAudioScrubPlugin() {
         'video load reset'
       )
 
-      // premiereEditingWorkflowPlugin already decodes the audio track from compatible
-      // video files to draw the waveform. Reuse that exact decoded buffer for scrubbing.
       replaceStrict(
         '        const decodedAudio = await waveformCtx.decodeAudioData(mediaBuffer);',
         '        const decodedAudio = await waveformCtx.decodeAudioData(mediaBuffer);\n        scrubAudioBufferRef.current = decodedAudio;',
@@ -83,11 +81,8 @@ export function editorFrameAudioScrubPlugin() {
         '    if (!AudioCtx) return;',
         '    let ctx = scrubAudioContextRef.current;',
         '    if (!ctx || ctx.state === "closed") {',
-        '      try {',
-        '        ctx = new AudioCtx({ latencyHint: "interactive" });',
-        '      } catch {',
-        '        ctx = new AudioCtx();',
-        '      }',
+        '      try { ctx = new AudioCtx({ latencyHint: "interactive" }); }',
+        '      catch { ctx = new AudioCtx(); }',
         '      scrubAudioContextRef.current = ctx;',
         '    }',
         '    if (ctx.state === "suspended") ctx.resume().catch(() => {});',
@@ -104,7 +99,6 @@ export function editorFrameAudioScrubPlugin() {
         '      source.buffer = buffer;',
         '      source.connect(gain);',
         '      gain.connect(ctx.destination);',
-        '',
         '      const now = ctx.currentTime;',
         '      const edgeFade = Math.min(0.0025, grainDuration * 0.22);',
         '      const releaseAt = Math.max(now + edgeFade, now + grainDuration - edgeFade);',
@@ -112,7 +106,6 @@ export function editorFrameAudioScrubPlugin() {
         '      gain.gain.linearRampToValueAtTime(0.82, now + edgeFade);',
         '      gain.gain.setValueAtTime(0.82, releaseAt);',
         '      gain.gain.linearRampToValueAtTime(0.0001, now + grainDuration);',
-        '',
         '      scrubVoiceRef.current = { source, gain };',
         '      source.onended = () => {',
         '        if (scrubVoiceRef.current?.source === source) scrubVoiceRef.current = null;',
@@ -154,8 +147,6 @@ export function editorFrameAudioScrubPlugin() {
         'frame step audio'
       )
 
-      // Emit exactly one grain whenever the snapped playhead crosses into another frame.
-      // Duplicate mousemove events inside the same frame are intentionally ignored.
       replaceStrict(
         '    pause();\n    const apply = (ev) => {',
         '    pause();\n    scrubLastFrameRef.current = null;\n    const apply = (ev) => {',
@@ -172,26 +163,18 @@ export function editorFrameAudioScrubPlugin() {
         'scrub session cleanup'
       )
 
-      // Normal playback must never overlap a leftover scrub grain.
       replaceStrict(
         '  const play = async () => {\n    const mediaEl = getMediaEl();',
         '  const play = async () => {\n    stopScrubVoice(false);\n    scrubLastFrameRef.current = null;\n    const mediaEl = getMediaEl();',
         'playback scrub cleanup'
       )
 
-      // Small discoverability hints only; no layout or waveform rendering changes.
       out = out.replace(
         'title="클릭/드래그: 프레임 단위 재생 헤드 이동"',
         'title="클릭/드래그: 프레임 단위 이동 · 프레임마다 오디오 스크럽"'
       )
-      out = out.replace(
-        'title="이전 프레임 · ←"',
-        'title="이전 프레임 + 오디오 스크럽 · ←"'
-      )
-      out = out.replace(
-        'title="다음 프레임 · →"',
-        'title="다음 프레임 + 오디오 스크럽 · →"'
-      )
+      out = out.replace('title="이전 프레임 · ←"', 'title="이전 프레임 + 오디오 스크럽 · ←"')
+      out = out.replace('title="다음 프레임 · →"', 'title="다음 프레임 + 오디오 스크럽 · →"')
 
       if (!out.includes('playScrubFrame(target, true)') || !out.includes('scrubAudioBufferRef.current = decoded') || !out.includes('grainDuration = Math.max(0.001, Math.min(frameDuration')) {
         throw new Error('frame audio scrub: build assertions failed')
