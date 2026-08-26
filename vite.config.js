@@ -54,6 +54,7 @@ import { managementV068FirmwareGeneratorFixPlugin } from './scripts/managementV0
 import { managementV069MasterSramPlugin } from './scripts/managementV069MasterSramPlugin.js'
 import { managementV0610AClockDiagnosticsPlugin } from './scripts/managementV0610AClockDiagnosticsPlugin.js'
 import { managementV0611PerformanceLockPlugin } from './scripts/managementV0611PerformanceLockPlugin.js'
+import { managementEsp32LcdCompatPlugin } from './scripts/managementEsp32LcdCompatPlugin.js'
 import { managementEsp32FieldReadyPlugin } from './scripts/managementEsp32FieldReadyPlugin.js'
 import { managementFirmwareHardenPlugin } from './scripts/managementFirmwareHardenPlugin.js'
 import { managementAutonomousFirmwareV062Plugin } from './scripts/managementAutonomousFirmwareV062Plugin.js'
@@ -133,6 +134,7 @@ export default defineConfig({
     managementV069MasterSramPlugin(),
     managementV0610AClockDiagnosticsPlugin(),
     managementV0611PerformanceLockPlugin(),
+    managementEsp32LcdCompatPlugin(),
     managementEsp32FieldReadyPlugin(),
     managementFirmwareSequenceDurationPlugin(),
     managementFrameScrubPlugin(),
