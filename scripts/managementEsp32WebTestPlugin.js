@@ -98,7 +98,7 @@ export function managementEsp32WebTestPlugin() {
       ].join('\n')
       out = replaceOnce(out, helperAnchor, helpers + helperAnchor, 'ESP32 test helpers')
 
-      const originalBButton = "          <button className=\"tbtn compact\" disabled={!masterProtocolReady || !previewSafe || stageLive} onClick={armModeB}>B LIVE START @ {fmtTime(currentTime)}</button>"
+      const originalBButton = "          <button className=\"tbtn compact\" disabled={!masterProtocolReady || !previewSafe || stageLive} onClick={armModeB}>① B LIVE START @ {fmtTime(currentTime)}</button>"
       const isolatedButtons = [
         "          {esp32TransportReady ? (",
         "            <>",
