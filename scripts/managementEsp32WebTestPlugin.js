@@ -9,7 +9,7 @@ export function managementEsp32WebTestPlugin() {
     enforce: 'pre',
     transform(code, id) {
       if (!id.includes('src/ManagementApp.jsx')) return null
-      if (code.includes('ESP32_WEB_TEST_ISOLATED_V2')) return { code, map: null }
+      if (code.includes('ESP32_WEB_TEST_ISOLATED_V3')) return { code, map: null }
 
       let out = code
 
@@ -48,10 +48,9 @@ export function managementEsp32WebTestPlugin() {
       )
 
       // ESP32 follows the same PERFORMANCE model as the proven nRF24 path:
-      // 1) ESP32 LIVE START creates the B LIVE epoch.
-      // 2) The existing A 공연 LOCK then commits that exact running epoch without sending
-      //    any extra serial/RF command, seek, restart, or clock re-anchor.
-      // 3) Once A is locked, the ESP32 test force-stop is disabled as well.
+      // 1) ESP32 B LIVE starts the local web timeline and RX epoch together.
+      // 2) LIVE_STARTED only confirms/follows the already-running epoch.
+      // 3) The existing A 공연 LOCK then commits that same running epoch without a restart.
       const helperAnchor = "  const requestStageStop = async () => {"
       const helpers = [
         "  const startEsp32FieldTest = async () => {",
@@ -70,19 +69,22 @@ export function managementEsp32WebTestPlugin() {
         "      return",
         "    }",
         "    pause(false)",
-        "    // Mark this as a B epoch before the MASTER replies LIVE_STARTED. The shared",
-        "    // LIVE_STARTED handler will therefore enter B_LIVE, enabling the same",
-        "    // no-command A PERFORMANCE LOCK used by nRF24.",
+        "    bArmedOffsetRef.current = offsetMs",
         "    bLivePrimedRef.current = true",
         "    bStartSentRef.current = true",
+        "    // LIVE_START_NOW has no START lead. Start the local media from the exact same",
+        "    // current timeline position before sending the RF command. The shared",
+        "    // LIVE_STARTED handler sees bLivePrimedRef and will not start it a second time.",
+        "    await playLocalAt(clamp(offsetMs / 1000, 0, duration), false)",
         "    const sent = await sendSerialLine(`LIVE_START_NOW ${offsetMs}`)",
         "    if (!sent) {",
         "      bStartSentRef.current = false",
         "      bLivePrimedRef.current = false",
+        "      pause(false)",
         "      showToast('ESP32 LIVE START 전송 실패 · MASTER USB 연결을 확인해 주세요.')",
         "      return",
         "    }",
-        "    showToast(`ESP32 B LIVE START 전송 · ${fmtTime(offsetMs / 1000)} · RX ACK 대기`)",
+        "    showToast(`ESP32 B LIVE START · ${fmtTime(offsetMs / 1000)} · 웹/RX 타임라인 동시 진행`)",
         "  }",
         "",
         "  const stopEsp32FieldTest = async () => {",
@@ -124,7 +126,7 @@ export function managementEsp32WebTestPlugin() {
         "  <>",
         "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageLive} onClick={startEsp32FieldTest} style={{ color: '#62e7a2' }}>ESP32 B LIVE START @ {fmtTime(currentTime)}</button>",
         "    <button className=\"tbtn compact\" disabled={!masterProtocolReady || stageMode !== 'B_LIVE'} onClick={stopEsp32FieldTest} style={{ color: stageMode === 'B_LIVE' ? '#ff657a' : undefined }}>ESP32 FORCE STOP</button>",
-        "    <span style={{ color: stageMode === 'A_LIVE' ? '#62e7a2' : '#62e7a2', fontWeight: 800 }}>{stageMode === 'A_LIVE' ? 'ESP-NOW · A LOCKED' : stageMode === 'B_LIVE' ? 'ESP-NOW · B LIVE' : 'ESP-NOW TEST'}</span>",
+        "    <span style={{ color: '#62e7a2', fontWeight: 800 }}>{stageMode === 'A_LIVE' ? 'ESP-NOW · A LOCKED' : stageMode === 'B_LIVE' ? 'ESP-NOW · B LIVE' : 'ESP-NOW TEST'}</span>",
         "  </>",
         ") : (",
         originalBButton,
@@ -132,7 +134,7 @@ export function managementEsp32WebTestPlugin() {
       ].join('\n')
       out = out.slice(0, buttonStart) + isolatedButtons + out.slice(buttonEnd + '</button>'.length)
 
-      out += '\n// ESP32_WEB_TEST_ISOLATED_V2\n'
+      out += '\n// ESP32_WEB_TEST_ISOLATED_V3\n'
       return { code: out, map: null }
     },
   }
