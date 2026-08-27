@@ -1,0 +1,37 @@
+.workspace-nav {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  background: rgba(11,14,20,.90);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.28);
+}
+
+.workspace-nav__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  color: rgba(235,242,255,.68);
+  font: 700 11px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: .08em;
+  text-decoration: none;
+  transition: background .15s ease, color .15s ease;
+}
+
+.workspace-nav__item:hover { color: #fff; background: rgba(255,255,255,.08); }
+.workspace-nav__item.is-active { color: #f5fbff; background: rgba(73,168,255,.18); box-shadow: inset 0 0 0 1px rgba(95,183,255,.30); }
+
+@media (max-width: 720px) {
+  .workspace-nav { top: 8px; right: 8px; gap: 2px; padding: 3px; }
+  .workspace-nav__item { padding: 0 8px; font-size: 9px; }
+}
