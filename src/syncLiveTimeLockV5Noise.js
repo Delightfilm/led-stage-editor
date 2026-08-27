@@ -168,12 +168,14 @@ export class SyncLiveTimeLockV5Noise extends SyncLiveTimeLockV5 {
     const speechPenalty = clamp((speechDominance - 0.72) / 0.28, 0, 1) * 0.28
     const quality = clamp((bandScore * 0.42 + energyScore * 0.38 + levelScore * 0.20) * (1 - speechPenalty), 0, 1)
 
-    // A loud voice right next to the computer can have high level but almost all
-    // positive spectral energy concentrated in the speech range. Treat that as
-    // "no decision", not a failed match and never as a new time candidate.
-    const speechOnly = instantSpeechDominance > 0.94 && nonSpeechPersistent === 0
+    // Near-pure speech is intentionally not trusted: audience speech and a vocal-only
+    // section are acoustically too similar to distinguish safely from a room mic.
+    const speechOnly = instantSpeechDominance > 0.965
+    // A one-frame clap / impact can be broad and loud but has not persisted long enough
+    // to be useful music evidence. Skip it rather than recording a verification failure.
+    const transientOnly = persistentBands < 2 && salienceEnergy > 0.55
     const tooWeak = finite(this.lastInputDb) && this.lastInputDb < -72
-    const gate = quality < 0.24 || speechOnly || tooWeak
+    const gate = quality < 0.24 || speechOnly || transientOnly || tooWeak
 
     this.noiseQuality = quality
     this.noiseGate = gate
