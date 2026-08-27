@@ -50,6 +50,7 @@ function mean(records, key) {
 function summarize(records) {
   const total = records?.length || 0
   const passCount = total ? records.filter((record) => record.pass).length : 0
+  const phaseRecords = (records || []).filter((record) => record.reason !== 'NO MATCH' && finite(record.delta))
   return {
     total,
     passCount,
@@ -57,7 +58,9 @@ function summarize(records) {
     avgConfidence: mean(records, 'confidence'),
     avgEnsemble: mean(records, 'ensemble'),
     avgValidators: mean(records, 'validators'),
-    avgAbsDeltaMs: total ? mean(records.map((r) => ({ value: Math.abs(Number(r.delta || 0)) * 1000 })), 'value') : 0,
+    avgAbsDeltaMs: phaseRecords.length
+      ? phaseRecords.reduce((sum, record) => sum + Math.abs(Number(record.delta || 0)) * 1000, 0) / phaseRecords.length
+      : 0,
   }
 }
 
@@ -99,6 +102,33 @@ export class SyncLiveMatcherV10 extends BaseV9 {
     this.v10Reanchors = 0
   }
 
+  clearDecisionWindow() {
+    this.v10OutlierStreak = 0
+    this.v10Consensus = null
+    this.v10ConsensusScore = 0
+    this.v10DecisionMode = 'WAITING'
+    this.v10DecisionSec = 0
+    this.v10RiskFlags = []
+  }
+
+  setWindow(inSec, outSec, now = performance.now(), enabled = true) {
+    const result = super.setWindow(inSec, outSec, now, enabled)
+    this.clearDecisionWindow()
+    return result
+  }
+
+  rejectCandidate(now = performance.now()) {
+    super.rejectCandidate(now)
+    this.clearDecisionWindow()
+    return this.snapshot(now, null)
+  }
+
+  unlock(now = performance.now()) {
+    super.unlock(now)
+    this.clearDecisionWindow()
+    return this.snapshot(now, null)
+  }
+
   isDecisionHold() {
     return !!this.noiseGate || !!this.v7Ambiguous || !!this.v9RepeatedHold
   }
@@ -129,6 +159,14 @@ export class SyncLiveMatcherV10 extends BaseV9 {
     this.v10DecisionSec = 0
   }
 
+  updateConsensusSummary(metrics, now) {
+    const summary = summarize(this.verify)
+    this.v10Consensus = summary
+    this.v10DecisionSec = this.provisional ? Math.max(0, (now - this.provisional.at) / 1000) : 0
+    this.v10ConsensusScore = consensusScore(summary, metrics.uniqueness, metrics.margin)
+    return summary
+  }
+
   updateVerification(evidence, now) {
     // Noise/SNR gates, V7 multi-candidate ambiguity and V9 repeated-region hold are
     // intentionally neither PASS nor FAIL. We simply wait for better information.
@@ -147,11 +185,12 @@ export class SyncLiveMatcherV10 extends BaseV9 {
           confidence: 0,
           ensemble: metrics.ensemble,
           validators: metrics.validators,
-          delta: 0,
+          delta: null,
           at: now,
           reason: 'NO MATCH',
         })
         if (this.verify.length > MAX_CONSENSUS_RECORDS) this.verify.shift()
+        this.updateConsensusSummary(metrics, now)
       }
       return
     }
@@ -198,10 +237,7 @@ export class SyncLiveMatcherV10 extends BaseV9 {
       return
     }
 
-    const summary = summarize(this.verify)
-    this.v10Consensus = summary
-    this.v10DecisionSec = this.provisional ? Math.max(0, (now - this.provisional.at) / 1000) : 0
-    this.v10ConsensusScore = consensusScore(summary, metrics.uniqueness, metrics.margin)
+    const summary = this.updateConsensusSummary(metrics, now)
 
     const repeated = metrics.uniqueness < 0.32
     const fastReady = !repeated &&
