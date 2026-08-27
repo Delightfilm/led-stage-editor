@@ -22,12 +22,25 @@ const RootApp = workspace === 'management'
     : workspace === 'nrf-diagnostic'
       ? NrfDiagnosticApp
       : App
+const showWorkspaceNav = currentWorkspace !== 'sync-live'
+
+const workspaceApp = (
+  <Suspense fallback={<div>LED STAGE MANAGEMENT 로딩 중…</div>}>
+    <RootApp />
+  </Suspense>
+)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {currentWorkspace !== 'sync-live' ? <WorkspaceNav current={currentWorkspace} /> : null}
-    <Suspense fallback={<div>LED STAGE MANAGEMENT 로딩 중…</div>}>
-      <RootApp />
-    </Suspense>
+    {showWorkspaceNav ? (
+      <div className={`workspace-shell workspace-shell--${currentWorkspace}`}>
+        <div className="workspace-shell__nav">
+          <WorkspaceNav current={currentWorkspace} />
+        </div>
+        <div className="workspace-shell__content">
+          {workspaceApp}
+        </div>
+      </div>
+    ) : workspaceApp}
   </StrictMode>,
 )
