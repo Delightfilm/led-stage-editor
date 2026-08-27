@@ -13,9 +13,17 @@ export function syncLiveNoiseV5Plugin() {
         "import { SyncLiveTimeLockV5Noise as SyncLiveTimeLockV5, SYNC_LIVE_V5 } from './syncLiveTimeLockV5Noise.js'",
       )
 
+      const onFeatureOld = '  const onFeature = (feature) => {'
+      if (!next.includes(onFeatureOld)) throw new Error('sync live noise V5.0: onFeature signature anchor not found')
+      next = next.replace(onFeatureOld, '  const onFeature = (feature, liveDb = null) => {')
+
       const pushOld = '    const status = ctl.push(feature, raw, performance.now())'
       if (!next.includes(pushOld)) throw new Error('sync live noise V5.0: controller push anchor not found')
-      next = next.replace(pushOld, '    const status = ctl.push(feature, raw, performance.now(), { inputDb })')
+      next = next.replace(pushOld, '    const status = ctl.push(feature, raw, performance.now(), { inputDb: liveDb })')
+
+      const workletFeatureOld = 'onFeature(extractFeature(samples.subarray(0, FFT_SIZE), ctx.sampleRate))'
+      if (!next.includes(workletFeatureOld)) throw new Error('sync live noise V5.0: AudioWorklet feature anchor not found')
+      next = next.replace(workletFeatureOld, 'onFeature(extractFeature(samples.subarray(0, FFT_SIZE), ctx.sampleRate), db)')
 
       next = next.replace('MATCH ENGINE · V5 TIME LOCK', 'MATCH ENGINE · V5.0 NOISE RESISTANT')
 
