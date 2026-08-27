@@ -28,6 +28,7 @@ import { projectLinkedMediaUxPlugin } from './scripts/projectLinkedMediaUxPlugin
 import { multiProjectManagerPlugin } from './scripts/multiProjectManagerPlugin.js'
 import { projectFootageVisibilityFixPlugin } from './scripts/projectFootageVisibilityFixPlugin.js'
 import { projectFootageDeletePlugin } from './scripts/projectFootageDeletePlugin.js'
+import { projectAccordionUiPlugin } from './scripts/projectAccordionUiPlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { workspaceUiPolishPlugin } from './scripts/workspaceUiPolishPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
@@ -110,6 +111,7 @@ export default defineConfig({
     multiProjectManagerPlugin(),
     projectFootageVisibilityFixPlugin(),
     projectFootageDeletePlugin(),
+    projectAccordionUiPlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
     scopeManagementPlugin(managementEsp32FirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
