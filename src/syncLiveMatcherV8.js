@@ -22,7 +22,6 @@ function cosine(a, b) {
 function tonalSignature(frame) {
   const bins = new Float32Array(12)
   for (let i = 0; i < (frame?.length || 0); i += 1) {
-    // Shift normalized bands into positive energy-like values before folding.
     bins[i % 12] += Math.max(0, Number(frame[i] || 0) + 2.5)
   }
   let norm = 0
@@ -145,7 +144,11 @@ export class SyncLiveMatcherV8 extends BaseV7 {
     this.v8Top = metrics[0] || null
     this.v8EnsembleMargin = metrics.length > 1 ? metrics[0].ensemble - metrics[1].ensemble : metrics.length ? metrics[0].ensemble : 0
 
-    if (metrics.length > 1 && metrics[0].support >= 3 && metrics[1].support >= 3) {
+    // Clear stale ambiguity once the candidate bank has actually converged to one track.
+    if (metrics.length <= 1) {
+      this.v7Ambiguous = false
+      this.v7Margin = this.v8EnsembleMargin
+    } else if (metrics[0].support >= 3 && metrics[1].support >= 3) {
       this.v7Ambiguous = this.v8EnsembleMargin < ENSEMBLE_MARGIN
       this.v7Margin = this.v8EnsembleMargin
     }
