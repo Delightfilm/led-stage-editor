@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "vite --config vite.sync-live-mic.config.js",
+    "build": "vite build --config vite.sync-live-mic.config.js",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview --config vite.sync-live-mic.config.js"
   },
   "dependencies": {
     "react": "^19.2.7",
