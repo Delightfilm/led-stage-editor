@@ -29,6 +29,7 @@ import { multiProjectManagerPlugin } from './scripts/multiProjectManagerPlugin.j
 import { projectFootageVisibilityFixPlugin } from './scripts/projectFootageVisibilityFixPlugin.js'
 import { projectFootageDeletePlugin } from './scripts/projectFootageDeletePlugin.js'
 import { projectAccordionUiPlugin } from './scripts/projectAccordionUiPlugin.js'
+import { projectAssetPlacementFixPlugin } from './scripts/projectAssetPlacementFixPlugin.js'
 import { managementMenuPlugin } from './scripts/managementMenuPlugin.js'
 import { workspaceUiPolishPlugin } from './scripts/workspaceUiPolishPlugin.js'
 import { managementSerialSafetyPlugin } from './scripts/managementSerialSafetyPlugin.js'
@@ -112,6 +113,7 @@ export default defineConfig({
     projectFootageVisibilityFixPlugin(),
     projectFootageDeletePlugin(),
     projectAccordionUiPlugin(),
+    projectAssetPlacementFixPlugin(),
     scopeManagementPlugin(managementFirmwarePanelPlugin()),
     scopeManagementPlugin(managementEsp32FirmwarePanelPlugin()),
     scopeManagementPlugin(managementABModePlugin()),
