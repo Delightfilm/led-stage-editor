@@ -5,7 +5,7 @@ import App from './App.jsx'
 import WorkspaceNav from './WorkspaceNav.jsx'
 
 const ManagementApp = lazy(() => import('./ManagementApp.jsx'))
-const SyncLiveApp = lazy(() => import('./SyncLiveApp.jsx'))
+const SyncLiveApp = lazy(() => import('./SyncLiveAppV2.jsx'))
 const workspace = new URLSearchParams(window.location.search).get('workspace')
 const currentWorkspace = workspace === 'management' ? 'management' : workspace === 'sync-live' ? 'sync-live' : 'timeline'
 const RootApp = workspace === 'management' ? ManagementApp : workspace === 'sync-live' ? SyncLiveApp : App
