@@ -1,17 +1,67 @@
-.workspace-nav {
-  position: fixed;
-  top: 14px;
-  right: 18px;
+:root {
+  --workspace-nav-rail-height: 58px;
+}
+
+.workspace-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #0b0d13;
+}
+
+.workspace-shell__nav {
+  position: relative;
   z-index: 10050;
+  flex: 0 0 var(--workspace-nav-rail-height);
+  height: var(--workspace-nav-rail-height);
+  min-height: var(--workspace-nav-rail-height);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  background: #0d1118;
+  scrollbar-width: none;
+}
+
+.workspace-shell__nav::-webkit-scrollbar {
+  display: none;
+}
+
+.workspace-shell__content {
+  position: relative;
+  isolation: isolate;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: calc(100% - var(--workspace-nav-rail-height));
+  overflow: hidden;
+}
+
+/* Timeline and Management both define their app shell as 100vh. Inside the
+   shared workspace rail they must consume only the remaining viewport. */
+.workspace-shell__content > .app {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+}
+
+.workspace-nav {
+  position: static;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: max-content;
   padding: 5px;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 10px;
-  background: rgba(11,14,20,.90);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 10px 30px rgba(0,0,0,.28);
+  background: rgba(11,14,20,.96);
+  box-shadow: 0 8px 24px rgba(0,0,0,.24);
 }
 
 .workspace-nav__item {
@@ -32,6 +82,8 @@
 .workspace-nav__item.is-active { color: #f5fbff; background: rgba(73,168,255,.18); box-shadow: inset 0 0 0 1px rgba(95,183,255,.30); }
 
 @media (max-width: 720px) {
-  .workspace-nav { top: 8px; right: 8px; gap: 2px; padding: 3px; }
-  .workspace-nav__item { padding: 0 8px; font-size: 9px; }
+  :root { --workspace-nav-rail-height: 50px; }
+  .workspace-shell__nav { padding: 6px 8px; }
+  .workspace-nav { gap: 2px; padding: 3px; }
+  .workspace-nav__item { min-height: 30px; padding: 0 8px; font-size: 9px; }
 }
