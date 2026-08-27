@@ -7,9 +7,16 @@ export function projectAssetPlacementFixPlugin() {
       let out = code
 
       const startAnchor = '  const loadProjectAsset = async (assetId) => {'
-      const endAnchor = '  const updateSequenceDuration = (id, value) => {'
+      const deleteHelperAnchor = '  const preserveDeletedFootageClip = (clip, asset) => {'
+      const sequenceAnchor = '  const updateSequenceDuration = (id, value) => {'
       const start = out.indexOf(startAnchor)
-      const end = out.indexOf(endAnchor, start)
+      const deleteHelperStart = out.indexOf(deleteHelperAnchor, start)
+      const sequenceStart = out.indexOf(sequenceAnchor, start)
+      // projectFootageDeletePlugin runs before this plugin and inserts its delete helpers
+      // between loadProjectAsset() and updateSequenceDuration(). Only replace
+      // loadProjectAsset(); never slice away the delete helper block.
+      const end = deleteHelperStart > start ? deleteHelperStart : sequenceStart
+      const hadDeleteHelper = out.includes('const deleteProjectAsset =')
       if (start < 0 || end <= start) throw new Error('project asset placement fix: loadProjectAsset bounds not found')
 
       const replacement = `  const loadProjectAsset = async (assetId) => {
@@ -109,6 +116,9 @@ export function projectAssetPlacementFixPlugin() {
 
       if (!out.includes('sourceAlreadyLoaded') || !out.includes('candidateSignature') || !out.includes('hydrateProjectMediaSource')) {
         throw new Error('project asset placement fix: build assertion failed')
+      }
+      if (hadDeleteHelper && !out.includes('const deleteProjectAsset =')) {
+        throw new Error('project asset placement fix: footage delete helper was removed')
       }
 
       return { code: out, map: null }
