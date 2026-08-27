@@ -52,6 +52,7 @@
 .nrfdiag-warning strong { color: #ffe0a4; font-size: 12px; }
 .nrfdiag-warning span { font-size: 12px; line-height: 1.5; }
 .nrfdiag-warning a { color: #e8f5ff; text-decoration: none; font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+.nrfdiag-downloads { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 
 .nrfdiag-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; padding: 10px; border: 1px solid #1f2832; border-radius: 10px; background: #0f141a; }
 
@@ -65,7 +66,7 @@
 .nrfdiag-diagnosis.tone-muted { border-left-color: #596574; }
 
 .nrfdiag-grid { display: grid; gap: 10px; }
-.nrfdiag-health-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); margin-bottom: 10px; }
+.nrfdiag-health-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); margin-bottom: 10px; }
 .nrfdiag-card { min-width: 0; padding: 15px; border: 1px solid #202933; border-radius: 10px; background: #10151b; }
 .nrfdiag-card > span { display: block; color: #6f7f8e; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
 .nrfdiag-card > strong { display: block; overflow: hidden; margin-top: 9px; font-size: 24px; text-overflow: ellipsis; white-space: nowrap; }

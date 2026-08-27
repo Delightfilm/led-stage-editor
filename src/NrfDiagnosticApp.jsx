@@ -30,6 +30,7 @@ export default function NrfDiagnosticApp() {
   const [stressRunning, setStressRunning] = useState(false)
   const [sweep, setSweep] = useState([])
   const [sweepRunning, setSweepRunning] = useState(false)
+  const [peerResult, setPeerResult] = useState(null)
   const [baseline, setBaseline] = useState(loadBaseline)
   const [logs, setLogs] = useState([])
   const [toast, setToast] = useState(null)
@@ -91,6 +92,10 @@ export default function NrfDiagnosticApp() {
     }
     if (packet.type === 'sweep_done') {
       setSweepRunning(false)
+      return
+    }
+    if (packet.type === 'rf_peer') {
+      setPeerResult(packet)
       return
     }
     if (packet.type === 'error') showToast(packet.message || '진단 펌웨어 오류')
@@ -187,6 +192,7 @@ export default function NrfDiagnosticApp() {
       setRegisters(null)
       setStress(null)
       setSweep([])
+      setPeerResult(null)
       setLogs([])
       try { await port.setSignals({ dataTerminalReady: false, requestToSend: false }) } catch {}
       if (port.writable) writerRef.current = port.writable.getWriter()
@@ -222,6 +228,12 @@ export default function NrfDiagnosticApp() {
     await sendLine('SWEEP')
   }
 
+  const runPeerTest = async () => {
+    if (!protocolReady) return showToast('진단 펌웨어 연결이 필요합니다.')
+    setPeerResult(null)
+    await sendLine('RF PEER TEST')
+  }
+
   const runCeTest = async () => {
     if (!protocolReady) return showToast('진단 펌웨어 연결이 필요합니다.')
     await sendLine('CE TEST')
@@ -255,8 +267,10 @@ export default function NrfDiagnosticApp() {
     if (clamp(health.bus) < 99) return { tone: 'warn', title: 'SCK/CSN 또는 전원 품질 의심', text: 'SPI framing이 간헐적으로 무너집니다. SCK/CSN을 소프트웨어만으로 완전히 분리할 수는 없으므로 두 경로와 3.3V를 함께 확인하세요.' }
     if (stress && (Number(stress.read_fail) + Number(stress.write_fail) + Number(stress.bad_status)) > 0) return { tone: 'warn', title: '간헐 접촉불량 감지', text: 'Stress Test 중 오류가 기록됐습니다. 모듈/핀헤더를 가볍게 움직이며 오류 카운터가 증가하는 순간을 확인하세요.' }
     if (health.ce === 'FAIL') return { tone: 'bad', title: 'CE/TX 상태 전환 실패', text: 'SPI는 정상이나 CE pulse 뒤 TX_DS가 확인되지 않았습니다. D9/CE 경로 또는 nRF 내부 TX state machine을 확인하세요.' }
-    return { tone: 'good', title: '단일 모듈 전기적 검사 PASS', text: 'SPI read/write와 CE/TX state machine이 정상입니다. 안테나/PA의 실제 RF 출력은 known-good peer 테스트가 있어야 최종 판정할 수 있습니다.' }
-  }, [connected, protocolReady, health, stress])
+    if (peerResult && Number(peerResult.rate) < 950) return { tone: 'bad', title: 'RF 링크 불량 감지', text: 'SPI와 CE는 통과했지만 known-good peer ACK 성공률이 낮습니다. 후보 nRF의 RF 송신/ACK 수신 경로, PA/LNA, 안테나, 전원을 의심하세요.' }
+    if (peerResult && Number(peerResult.rate) >= 990) return { tone: 'good', title: '전기 + RF 검증 PASS', text: 'SPI read/write, CE/TX state machine, known-good peer ACK 링크가 모두 정상입니다. 새 모듈 선별용으로 가장 강한 PASS 상태입니다.' }
+    return { tone: 'good', title: '단일 모듈 전기적 검사 PASS', text: 'SPI read/write와 CE/TX state machine이 정상입니다. 두 번째 spare UNO의 known-good peer까지 연결하면 실제 RF 링크도 검증할 수 있습니다.' }
+  }, [connected, protocolReady, health, stress, peerResult])
 
   const currentHash = registers?.hash || health?.hash || null
   const baselineMatch = baseline?.hash && currentHash ? baseline.hash === currentHash : null
@@ -288,7 +302,7 @@ export default function NrfDiagnosticApp() {
       <section className="nrfdiag-warning">
         <strong>공연용 MASTER/RX 코드와 완전 분리</strong>
         <span>이 탭은 별도 UNO + 검사할 nRF24 전용입니다. 기존 MASTER 또는 RX 보드에 Diagnostic 펌웨어를 업로드하지 마세요.</span>
-        <a href="/DF_NRF24_Diagnostic_UNO.ino" download>DIAGNOSTIC .INO 받기</a>
+        <div className="nrfdiag-downloads"><a href="/DF_NRF24_Diagnostic_UNO.ino" download>CANDIDATE .INO</a><a href="/DF_NRF24_Diagnostic_Peer_UNO.ino" download>PEER .INO</a></div>
       </section>
 
       <section className="nrfdiag-toolbar">
@@ -296,6 +310,7 @@ export default function NrfDiagnosticApp() {
         <button type="button" onClick={toggleStress} disabled={!protocolReady} className={stressRunning ? 'is-active' : ''}>{stressRunning ? 'STOP STRESS' : 'CONTACT STRESS'}</button>
         <button type="button" onClick={runSweep} disabled={!protocolReady || sweepRunning}>{sweepRunning ? 'SWEEP RUNNING…' : 'SPI SPEED SWEEP'}</button>
         <button type="button" onClick={runCeTest} disabled={!protocolReady}>CE / TX TEST</button>
+        <button type="button" onClick={runPeerTest} disabled={!protocolReady}>RF PEER TEST</button>
         <button type="button" onClick={() => sendLine('REGDUMP')} disabled={!protocolReady}>REGISTER DUMP</button>
         <button type="button" onClick={() => sendLine('RESET STATS')} disabled={!protocolReady}>RESET STATS</button>
       </section>
@@ -312,6 +327,7 @@ export default function NrfDiagnosticApp() {
         <article className="nrfdiag-card"><span>SCK / CSN</span><strong className={`tone-${health ? scoreTone(clamp(health.bus)) : 'muted'}`}>{health ? `${Math.round(clamp(health.bus))}%` : '—'}</strong><small>SPI framing</small></article>
         <article className="nrfdiag-card"><span>CE / TX</span><strong className={`tone-${passTone(health?.ce)}`}>{health?.ce || '—'}</strong><small>TX_DS state test</small></article>
         <article className="nrfdiag-card"><span>CONFIG HASH</span><strong className="nrfdiag-hash">{currentHash || '—'}</strong><small>{baselineMatch === true ? 'baseline match' : baselineMatch === false ? 'baseline mismatch' : 'baseline not set'}</small></article>
+        <article className="nrfdiag-card"><span>RF PEER ACK</span><strong className={`tone-${peerResult ? scoreTone(clamp(Number(peerResult.rate) / 10)) : 'muted'}`}>{peerResult ? `${(Number(peerResult.rate) / 10).toFixed(1)}%` : '—'}</strong><small>{peerResult ? `${peerResult.ok}/${peerResult.total} ACK` : 'optional known-good peer'}</small></article>
       </section>
 
       <section className="nrfdiag-columns">
@@ -355,14 +371,14 @@ export default function NrfDiagnosticApp() {
         </article>
 
         <article className="nrfdiag-panel">
-          <div className="nrfdiag-panel-head"><div><span>GOLDEN MODULE</span><h2>정상 기준 비교</h2></div><small>local browser</small></div>
+          <div className="nrfdiag-panel-head"><div><span>GOLDEN MODULE / RF PEER</span><h2>정상 기준 비교</h2></div><small>local browser + optional peer</small></div>
           <div className="nrfdiag-baseline">
             <div><span>CURRENT</span><strong>{currentHash || '—'}</strong></div>
             <div><span>BASELINE</span><strong>{baseline?.hash || '—'}</strong></div>
             <div><span>RESULT</span><strong className={`tone-${baselineMatch == null ? 'muted' : baselineMatch ? 'good' : 'bad'}`}>{baselineMatch == null ? 'NOT SET' : baselineMatch ? 'MATCH' : 'MISMATCH'}</strong></div>
           </div>
           <div className="nrfdiag-inline-actions"><button type="button" onClick={saveBaseline} disabled={!currentHash}>SET CURRENT AS BASELINE</button><button type="button" onClick={clearBaseline} disabled={!baseline}>CLEAR</button></div>
-          <p className="nrfdiag-help">known-good 모듈 하나를 기준으로 저장한 뒤 새 모듈을 교체하면 config register hash 차이를 즉시 확인할 수 있습니다.</p>
+          <p className="nrfdiag-help">known-good 모듈 하나를 기준 hash로 저장할 수 있습니다. 실제 RF까지 보려면 두 번째 spare UNO에 PEER .INO와 정상 nRF를 올려 전원을 켜고, 후보 보드에서 RF PEER TEST를 실행하세요. 테스트 채널은 CH42입니다.</p>
         </article>
       </section>
 

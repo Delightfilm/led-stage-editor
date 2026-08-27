@@ -16,10 +16,13 @@ static const uint8_t CE_PIN = 9;
 static const uint8_t CSN_PIN = 10;
 static uint32_t spiHz = 2000000UL;
 
+// nRF24L01+ commands/registers
 static const uint8_t R_REGISTER = 0x00;
 static const uint8_t W_REGISTER = 0x20;
+static const uint8_t R_RX_PAYLOAD = 0x61;
 static const uint8_t W_TX_PAYLOAD = 0xA0;
 static const uint8_t FLUSH_TX = 0xE1;
+static const uint8_t FLUSH_RX = 0xE2;
 static const uint8_t NOP_CMD = 0xFF;
 
 static const uint8_t REG_CONFIG = 0x00;
@@ -30,6 +33,8 @@ static const uint8_t REG_SETUP_RETR = 0x04;
 static const uint8_t REG_RF_CH = 0x05;
 static const uint8_t REG_RF_SETUP = 0x06;
 static const uint8_t REG_STATUS = 0x07;
+static const uint8_t REG_OBSERVE_TX = 0x08;
+static const uint8_t REG_RPD = 0x09;
 static const uint8_t REG_RX_ADDR_P0 = 0x0A;
 static const uint8_t REG_TX_ADDR = 0x10;
 static const uint8_t REG_RX_PW_P0 = 0x11;
@@ -119,6 +124,7 @@ static void writePayload(const uint8_t *data, uint8_t len) {
 }
 
 static bool plausibleStatus(uint8_t s) {
+  // Bit7 is reserved and should stay 0. RX_P_NO may be 0..7.
   return (s & 0x80) == 0;
 }
 
@@ -156,6 +162,15 @@ static void printHex32(uint32_t value) {
   for (int8_t shift = 28; shift >= 0; shift -= 4) Serial.print(hex[(value >> shift) & 0x0F]);
 }
 
+static bool singleWriteReadback(uint8_t pattern, uint8_t *statusOut = 0) {
+  uint8_t before = readReg(REG_RF_CH);
+  uint8_t status = writeReg(REG_RF_CH, pattern & 0x7F);
+  uint8_t after = readReg(REG_RF_CH);
+  writeReg(REG_RF_CH, before);
+  if (statusOut) *statusOut = status;
+  return after == (pattern & 0x7F);
+}
+
 static void measureSpi(uint16_t iterations, uint16_t &readOk, uint16_t &readFail, uint16_t &writeOk, uint16_t &writeFail, uint16_t &badStatus) {
   readOk = readFail = writeOk = writeFail = badStatus = 0;
   const uint8_t patterns[] = { 2, 37, 76, 83 };
@@ -178,6 +193,7 @@ static void measureSpi(uint16_t iterations, uint16_t &readOk, uint16_t &readFail
 
 static bool ceTxTest() {
   ceLow();
+
   uint8_t oldConfig = readReg(REG_CONFIG);
   uint8_t oldEnAa = readReg(REG_EN_AA);
   uint8_t oldEnRx = readReg(REG_EN_RXADDR);
@@ -191,10 +207,10 @@ static bool ceTxTest() {
 
   command(FLUSH_TX);
   writeReg(REG_STATUS, STATUS_RX_DR | STATUS_TX_DS | STATUS_MAX_RT);
-  writeReg(REG_EN_AA, 0x00);
+  writeReg(REG_EN_AA, 0x00);          // no ACK required
   writeReg(REG_EN_RXADDR, 0x01);
   writeReg(REG_SETUP_RETR, 0x00);
-  writeReg(REG_RF_CH, 2);
+  writeReg(REG_RF_CH, 2);             // stay away from stage CH76
   writeReg(REG_RX_PW_P0, 1);
   const uint8_t addr[5] = { 'D', 'F', 'D', 'I', 'A' };
   writeBytes(REG_TX_ADDR, addr, 5);
@@ -203,6 +219,7 @@ static bool ceTxTest() {
   uint8_t config = (oldConfig | CONFIG_PWR_UP) & ~CONFIG_PRIM_RX;
   writeReg(REG_CONFIG, config);
   delay(5);
+
   const uint8_t payload = 0xA5;
   writePayload(&payload, 1);
   ceHigh();
@@ -229,6 +246,80 @@ static bool ceTxTest() {
   writeReg(REG_CONFIG, oldConfig);
   ceLow();
   return pass;
+}
+
+
+static uint16_t rfPeerTest(uint16_t total, uint16_t &okOut, uint16_t &failOut) {
+  ceLow();
+  uint8_t oldConfig = readReg(REG_CONFIG);
+  uint8_t oldEnAa = readReg(REG_EN_AA);
+  uint8_t oldEnRx = readReg(REG_EN_RXADDR);
+  uint8_t oldAw = readReg(REG_SETUP_AW);
+  uint8_t oldRetr = readReg(REG_SETUP_RETR);
+  uint8_t oldCh = readReg(REG_RF_CH);
+  uint8_t oldRfSetup = readReg(REG_RF_SETUP);
+  uint8_t oldPw = readReg(REG_RX_PW_P0);
+  uint8_t oldTxAddr[5];
+  uint8_t oldRxAddr0[5];
+  readBytes(REG_TX_ADDR, oldTxAddr, 5);
+  readBytes(REG_RX_ADDR_P0, oldRxAddr0, 5);
+
+  const uint8_t addr[5] = { 'D', 'F', 'R', 'F', '1' };
+  command(FLUSH_TX);
+  writeReg(REG_STATUS, STATUS_RX_DR | STATUS_TX_DS | STATUS_MAX_RT);
+  writeReg(REG_EN_AA, 0x01);
+  writeReg(REG_EN_RXADDR, 0x01);
+  writeReg(REG_SETUP_AW, 0x03);
+  writeReg(REG_SETUP_RETR, 0x3F); // 1 ms retry delay, 15 retries
+  writeReg(REG_RF_CH, 42);
+  writeReg(REG_RF_SETUP, 0x06);   // 1 Mbps, 0 dBm
+  writeReg(REG_RX_PW_P0, 4);
+  writeBytes(REG_TX_ADDR, addr, 5);
+  writeBytes(REG_RX_ADDR_P0, addr, 5);
+  writeReg(REG_CONFIG, 0x0E);     // CRC2, PWR_UP, PTX
+  delay(5);
+
+  uint16_t ok = 0;
+  uint16_t fail = 0;
+  for (uint16_t seq = 0; seq < total; ++seq) {
+    command(FLUSH_TX);
+    writeReg(REG_STATUS, STATUS_RX_DR | STATUS_TX_DS | STATUS_MAX_RT);
+    uint8_t payload[4] = { 0xD4, 0x46, (uint8_t)(seq & 0xFF), (uint8_t)(seq >> 8) };
+    writePayload(payload, 4);
+    ceHigh();
+    delayMicroseconds(20);
+    ceLow();
+
+    bool done = false;
+    uint32_t start = micros();
+    while ((uint32_t)(micros() - start) < 30000UL) {
+      uint8_t status = readReg(REG_STATUS);
+      if (status & STATUS_TX_DS) { ++ok; done = true; break; }
+      if (status & STATUS_MAX_RT) { ++fail; done = true; break; }
+    }
+    if (!done) ++fail;
+    writeReg(REG_STATUS, STATUS_RX_DR | STATUS_TX_DS | STATUS_MAX_RT);
+    delay(2);
+  }
+
+  command(FLUSH_TX);
+  writeReg(REG_STATUS, STATUS_RX_DR | STATUS_TX_DS | STATUS_MAX_RT);
+  writeBytes(REG_TX_ADDR, oldTxAddr, 5);
+  writeBytes(REG_RX_ADDR_P0, oldRxAddr0, 5);
+  writeReg(REG_RX_PW_P0, oldPw);
+  writeReg(REG_RF_SETUP, oldRfSetup);
+  writeReg(REG_RF_CH, oldCh);
+  writeReg(REG_SETUP_RETR, oldRetr);
+  writeReg(REG_SETUP_AW, oldAw);
+  writeReg(REG_EN_RXADDR, oldEnRx);
+  writeReg(REG_EN_AA, oldEnAa);
+  writeReg(REG_CONFIG, oldConfig);
+  ceLow();
+
+  okOut = ok;
+  failOut = fail;
+  uint32_t denom = (uint32_t)ok + fail;
+  return denom ? (uint32_t)ok * 1000UL / denom : 0;
 }
 
 static void printHello() {
@@ -311,6 +402,7 @@ static void stressBatch(uint8_t count) {
     uint8_t ch = readReg(REG_RF_CH);
     if (!plausibleRegisters(status, aw, ch)) ++stressStats.readFail;
     if (!plausibleStatus(status)) ++stressStats.badStatus;
+
     uint8_t pattern = patterns[stressStats.cycles & 0x03];
     writeReg(REG_RF_CH, pattern);
     uint8_t got = readReg(REG_RF_CH, &status);
@@ -369,6 +461,16 @@ static void handleCommand(char *line) {
   if (equalsIgnoreCase(line, "STRESS STOP")) { stressRunning = false; printStress(); return; }
   if (equalsIgnoreCase(line, "RESET STATS")) { resetStats(); return; }
   if (equalsIgnoreCase(line, "SWEEP")) { stressRunning = false; runSweep(); return; }
+  if (equalsIgnoreCase(line, "RF PEER TEST")) {
+    stressRunning = false;
+    uint16_t ok = 0, fail = 0;
+    uint16_t rate = chipConnected() ? rfPeerTest(100, ok, fail) : 0;
+    Serial.print(F("{\"type\":\"rf_peer\",\"total\":100,\"ok\":")); Serial.print(ok);
+    Serial.print(F(",\"fail\":")); Serial.print(fail);
+    Serial.print(F(",\"rate\":")); Serial.print(rate);
+    Serial.println(F("}"));
+    return;
+  }
   if (equalsIgnoreCase(line, "CE TEST")) {
     bool pass = chipConnected() && ceTxTest();
     Serial.print(F("{\"type\":\"ce\",\"ce\":\"")); Serial.print(pass ? F("PASS") : F("FAIL"));
