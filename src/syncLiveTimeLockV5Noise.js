@@ -116,6 +116,8 @@ export class SyncLiveTimeLockV5Noise extends SyncLiveTimeLockV5 {
 
     let salienceEnergy = 0
     let speechEnergy = 0
+    let instantPositiveEnergy = 0
+    let instantSpeechPositiveEnergy = 0
     let persistentBands = 0
     let nonSpeechPersistent = 0
 
@@ -137,8 +139,13 @@ export class SyncLiveTimeLockV5Noise extends SyncLiveTimeLockV5 {
       const salience = Math.max(0, delta - threshold)
       const hz = bandCenter(i, n)
       const energy = salience * salience
+      const positiveEnergy = Math.max(0, value) ** 2
       salienceEnergy += energy
-      if (hz >= 300 && hz < 4000) speechEnergy += energy
+      instantPositiveEnergy += positiveEnergy
+      if (hz >= 300 && hz < 4000) {
+        speechEnergy += energy
+        instantSpeechPositiveEnergy += positiveEnergy
+      }
       if (persist >= 2 && salience > 0.08) {
         persistentBands += 1
         if (hz < 300 || hz >= 4000) nonSpeechPersistent += 1
@@ -152,7 +159,9 @@ export class SyncLiveTimeLockV5Noise extends SyncLiveTimeLockV5 {
       this.noiseDev[i] = dev + (absResidual - dev) * 0.028
     }
 
-    const speechDominance = salienceEnergy > 1e-7 ? speechEnergy / salienceEnergy : 0
+    const salienceSpeechDominance = salienceEnergy > 1e-7 ? speechEnergy / salienceEnergy : 0
+    const instantSpeechDominance = instantPositiveEnergy > 1e-7 ? instantSpeechPositiveEnergy / instantPositiveEnergy : 0
+    const speechDominance = Math.max(salienceSpeechDominance, instantSpeechDominance * 0.96)
     const bandScore = clamp((persistentBands - 1) / 5, 0, 1)
     const energyScore = clamp(Math.sqrt(salienceEnergy) / 2.0, 0, 1)
     const levelScore = finite(this.lastInputDb) ? clamp((this.lastInputDb + 68) / 28, 0, 1) : 0.65
@@ -160,8 +169,9 @@ export class SyncLiveTimeLockV5Noise extends SyncLiveTimeLockV5 {
     const quality = clamp((bandScore * 0.42 + energyScore * 0.38 + levelScore * 0.20) * (1 - speechPenalty), 0, 1)
 
     // A loud voice right next to the computer can have high level but almost all
-    // useful energy in the speech range. Treat that as "no decision", not FAIL.
-    const speechOnly = speechDominance > 0.90 && nonSpeechPersistent === 0
+    // positive spectral energy concentrated in the speech range. Treat that as
+    // "no decision", not a failed match and never as a new time candidate.
+    const speechOnly = instantSpeechDominance > 0.94 && nonSpeechPersistent === 0
     const tooWeak = finite(this.lastInputDb) && this.lastInputDb < -72
     const gate = quality < 0.24 || speechOnly || tooWeak
 
